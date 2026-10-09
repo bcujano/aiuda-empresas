@@ -148,7 +148,7 @@ const gemini = languageModel({
   version: 1.1,
   config: {
     name: 'Gemini (principal)',
-    parameters: { modelName: 'models/gemini-2.5-flash', options: { temperature: 0.4 } },
+    parameters: { modelName: 'models/gemini-3.8-flash', options: { temperature: 0.4 } },
     credentials: { googlePalmApi: { id: 'jbOxhXuz7QS5IefQ', name: 'Gemini Aiuda' } },
   },
 });
@@ -230,7 +230,7 @@ const leerRespuesta = node({
         "for (const c of ['nombre','empresa','cargo','ciudad','necesidad','motivo_descarte']) { if (typeof datos[c] === 'string' && datos[c].trim()) limpio[c] = datos[c].trim().slice(0, c === 'necesidad' ? 500 : 160); }\n" +
         "if (['1-9','10-49','50-199','200+'].includes(datos.colaboradores)) limpio.colaboradores = datos.colaboradores;\n" +
         "if (['baja','media','alta'].includes(datos.urgencia)) limpio.urgencia = datos.urgencia;\n" +
-        "const encaje = Number(datos.encaje); if (Number.isInteger(encaje) && encaje >= 0 && encaje <= 100) limpio.encaje = encaje;\n" +
+        "const encaje = datos.encaje == null || datos.encaje === '' ? NaN : Number(datos.encaje); if (Number.isInteger(encaje) && encaje >= 0 && encaje <= 100) limpio.encaje = encaje;\n" +
         "if (datos.etapa === 'calificado' || (datos.etapa === 'descartado' && limpio.motivo_descarte)) limpio.etapa = datos.etapa;\n" +
         "if (limpio.etapa !== 'descartado') delete limpio.motivo_descarte;\n" +
         "const cuerpo_crm = { phone_number_id: pnid, telefono: m.telefono, texto: m.texto, mensaje_entrante: m.texto, mensaje_agente: respuesta, chatwoot_conversacion_id: m.conversacion_id, ...limpio };\n" +
