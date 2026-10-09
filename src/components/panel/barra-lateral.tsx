@@ -46,7 +46,7 @@ function Contenido({ datos, alNavegar }: { datos: DatosBarra; alNavegar?: () => 
     <>
       <div className="flex items-start justify-between border-white/10 border-b p-5">
         <div className="min-w-0">
-          <p className="font-bold text-lg text-white tracking-tight">Aiuda Setter</p>
+          <p className="font-bold text-lg text-white tracking-tight">Aiuda Empresas</p>
           <p className="mt-0.5 truncate text-white/50 text-xs">
             {datos.org?.nombre ?? 'Elige un cliente'}
           </p>
@@ -171,7 +171,7 @@ export function BarraLateral({ datos }: { datos: DatosBarra }) {
         <button aria-label="Abrir menú" onClick={() => setAbierta(true)} type="button">
           <Menu size={22} />
         </button>
-        <span className="font-semibold text-sm">{datos.org?.nombre ?? 'Aiuda Setter'}</span>
+        <span className="font-semibold text-sm">{datos.org?.nombre ?? 'Aiuda Empresas'}</span>
       </header>
 
       {abierta ? (

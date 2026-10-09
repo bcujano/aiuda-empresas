@@ -1,4 +1,4 @@
-# Aiuda Setter
+# Aiuda Empresas
 
 Plataforma multicliente de Aiuda: anuncios en Meta → agente de IA en WhatsApp →
 reunión agendada, con un CRM por cliente. Primer cliente: Fagal Abogados.

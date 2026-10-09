@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  /* Aiuda Setter: barra lateral tinta, un solo acento. */
+  /* Aiuda Empresas: barra lateral tinta, un solo acento. */
   --color-lateral: #111827;
   --color-lateral-alto: #1f2937;
 

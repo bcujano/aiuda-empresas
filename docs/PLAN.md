@@ -1,4 +1,4 @@
-# Aiuda Setter · plan maestro
+# Aiuda Empresas · plan maestro
 
 > Plataforma multi-cliente de Aiuda: anuncios + agente de IA en WhatsApp + CRM.
 > Primer cliente: **Fagal Abogados** (Ecuador). Actualizado: 2026-10-09.
@@ -9,7 +9,7 @@
 **organización** (una fila en la base), no un repo ni un despliegue nuevo.
 
 ```
-                       aiuda-setter (un repo, una app en Vercel)
+                       aiuda-empresas (un repo, una app en Vercel)
                                      │
         ┌────────────────────────────┼────────────────────────────┐
    Organización Fagal          Organización B              Organización C
@@ -62,15 +62,15 @@ por la LOPDP; Aiuda es encargado del tratamiento). Lo que se retiene es la **her
 los datos. La fecha de fin de prueba se ve en el CRM desde el día 1, con aviso a 30 y 7 días.
 
 ### Repos
-- Este repo se renombra a **`aiuda-setter`** (GitHub mantiene la dirección vieja como
+- Este repo se renombra a **`aiuda-empresas`** (GitHub mantiene la dirección vieja como
   redirección). Lo propio de Fagal (textos de anuncios, investigación) vive en la base o en
   `docs/clientes/fagal/`.
-- Supabase: **cuenta nueva de Aiuda** con un proyecto `aiuda-setter` para **todos** los clientes
+- Supabase: **cuenta nueva de Aiuda** con un proyecto `aiuda-empresas` para **todos** los clientes
   (no uno por cliente). Plan gratis al inicio; cuando entren clientes de pago, Pro ($25/mes) lo
   pagan ellos.
 
 ### WhatsApp por cliente
-- Una app de Meta **«Aiuda Setter»** y una WABA en el Business Manager de Aiuda; cada cliente
+- Una app de Meta **«Aiuda Empresas»** y una WABA en el Business Manager de Aiuda; cada cliente
   suma **un número** con su nombre visible y su logo.
 - El webhook de la app apunta a **n8n** (no a Chatwoot): n8n reparte por `phone_number_id` y
   publica en la bandeja de Chatwoot del cliente (tipo API, patrón laundry-vip). Así se conserva
@@ -121,11 +121,11 @@ Anuncio Meta (página Aiuda, cuenta publicitaria Aiuda)
   └─ B) Landing en Vercel ─ botón WA ───┤   respaldo de confianza + retargeting
               └─ botón Agendar ─────────┤   (WA con mensaje listo y código FAG-<ángulo>)
                                         ▼
-        Número de Fagal (WABA de Aiuda) → n8n «Aiuda Setter» → organización por phone_number_id
-              → contexto de Fagal desde el CRM → Agente Setter → respuesta
+        Número de Fagal (WABA de Aiuda) → n8n «Aiuda Empresas» → organización por phone_number_id
+              → contexto de Fagal desde el CRM → agente de Aiuda Empresas → respuesta
               → copia en la cuenta de Chatwoot de Fagal (control humano)
                                         ▼
-        Agente Setter: responde dudas básicas · califica · propone horarios · agenda
+        agente de Aiuda Empresas: responde dudas básicas · califica · propone horarios · agenda
                                         ▼
         CRM (Vercel + Supabase): lead, empresa, calificación, cita, conversación
         Aviso a Fagal (correo + resumen) · Evento «Agendó» a Meta por Conversions API
@@ -162,7 +162,7 @@ menor costo por reunión; el peor se reemplaza. A las 3–4 semanas se nicha.
 
 Expectativa honesta con ~$75/mes: 40–100 conversaciones, 3–8 reuniones. Se valida en 2 semanas.
 
-## 4 · El CRM (Aiuda Setter)
+## 4 · El CRM (Aiuda Empresas)
 
 Next.js 16 + Supabase en Vercel, **con la arquitectura de laundry-vip** (la más limpia de los
 repos: capas `app → server → supabase`, Zod, Biome, Vitest, archivos ≤ 300 líneas,
@@ -191,7 +191,7 @@ Sin subdominio: dominio de Vercel.
 
 ## 5 · El agente
 
-- **n8n en Railway** (el que ya existe). Workflow nuevo «Aiuda Setter · Agente», uno para
+- **n8n en Railway** (el que ya existe). Workflow nuevo «Aiuda Empresas · Agente», uno para
   todas las organizaciones. Los workflows de 321, Academy y Laundry VIP no se tocan.
 - **Modelo:** Gemini (capa gratis) principal + OpenAI `gpt-4.1-mini` de respaldo
   (nodo AI Agent con modelo de reserva).
@@ -242,5 +242,5 @@ Sin subdominio: dominio de Vercel.
 ## 9 · Lo que Byron está haciendo
 - Número de Fagal + app de Meta. Pasar: Phone Number ID, WABA ID, token de usuario del sistema.
   **No conectarlo a Chatwoot** (el webhook va a n8n).
-- Cuenta nueva de Supabase con el proyecto `aiuda-setter`. Pasar: URL, `anon key`,
+- Cuenta nueva de Supabase con el proyecto `aiuda-empresas`. Pasar: URL, `anon key`,
   `service_role` (a Vercel, nunca al repo).

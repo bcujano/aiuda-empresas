@@ -13,7 +13,7 @@ export default function Login() {
     <main className="flex min-h-screen items-center justify-center bg-[var(--fondo)] px-4">
       <div className="w-full max-w-sm">
         <div className="mb-6 text-center">
-          <h1 className="font-bold text-2xl tracking-tight">Aiuda Setter</h1>
+          <h1 className="font-bold text-2xl tracking-tight">Aiuda Empresas</h1>
           <p className="mt-1 text-[var(--texto-suave)] text-sm">
             Leads, citas y conversaciones de tu empresa
           </p>

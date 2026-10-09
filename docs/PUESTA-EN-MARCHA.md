@@ -17,7 +17,7 @@ Falta conectar Supabase y Vercel (Byron) y construir la fase 2 (wizard y agente)
 ## Reparto (Byron, 2026-10-10: «yo solo cambio el nombre del repo, el resto lo haces tú»)
 
 **Byron (solo lo que exige su login):**
-1. Renombrar el repo en GitHub a `aiuda-setter`.
+1. Renombrar el repo en GitHub a `aiuda-empresas`.
 2. Crear la cuenta de Supabase de Aiuda y la cuenta/equipo de Vercel, y dejar dos tokens como
    variables del entorno de la sesión (nunca en el chat): `SUPABASE_ACCESS_TOKEN` (Account →
    Access Tokens) y `VERCEL_TOKEN` (Account Settings → Tokens). Vercel debe tener la app de
@@ -26,7 +26,7 @@ Falta conectar Supabase y Vercel (Byron) y construir la fase 2 (wizard y agente)
    usuario del sistema) y la de Gemini (clave de Google AI Studio). Pasar por chat solo el
    Phone Number ID y el WABA ID (no son secretos).
 
-**Claude (con esos tokens):** crea el proyecto `aiuda-setter` en Supabase (São Paulo), aplica
+**Claude (con esos tokens):** crea el proyecto `aiuda-empresas` en Supabase (São Paulo), aplica
 migraciones y semilla, crea el superadmin de Byron por invitación al correo (él pone su
 contraseña), crea el proyecto `aiuda-empresas` en Vercel con sus variables y despliega, arma el
 workflow de n8n, prueba de punta a punta y deja todo documentado aquí.
@@ -35,6 +35,6 @@ workflow de n8n, prueba de punta a punta y deja todo documentado aquí.
 - Hecho: `/api/agente/contexto` y `/api/agente/lead` (`src/server/agente*.ts`).
 - Wizard de conocimiento para el admin del cliente.
 - `/api/agente/*` (contexto por `phone_number_id`, registrar lead, calificar, horarios, agendar).
-- Workflow n8n «Aiuda Setter · Agente» (Gemini + OpenAI de respaldo) y cuenta de Chatwoot de Fagal.
+- Workflow n8n «Aiuda Empresas · Agente» (Gemini + OpenAI de respaldo) y cuenta de Chatwoot de Fagal.
 - Usuarios del cliente (alta de admin y operadores) y exportación a Excel.
 - Conversions API: evento «Agendó» a Meta.
