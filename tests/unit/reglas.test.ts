@@ -95,3 +95,11 @@ describe('semilla y vista previa', () => {
     }
   })
 })
+
+describe('dirección de Supabase', () => {
+  it('recorta la ruta pegada por error para que no dé PGRST125', async () => {
+    const { origenSupabase } = await import('@/lib/env')
+    expect(origenSupabase('https://abc.supabase.co/rest/v1/')).toBe('https://abc.supabase.co')
+    expect(origenSupabase('https://abc.supabase.co')).toBe('https://abc.supabase.co')
+  })
+})

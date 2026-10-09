@@ -5,10 +5,21 @@ import { z } from 'zod'
  * importar: así `next build` compila sin credenciales y una variable que falta
  * se nombra en el primer uso real, nunca se rellena con un valor por defecto.
  */
+/**
+ * Supabase solo necesita el origen (https://<proyecto>.supabase.co). Si se pegó
+ * con una ruta (p. ej. /rest/v1/), cada consulta da PGRST125: se recorta aquí.
+ */
+export function origenSupabase(url: string): string {
+  return new URL(url).origin
+}
+
+const urlSupabase = (nombre: string) =>
+  z.url(`${nombre} debe ser una URL absoluta`).transform(origenSupabase)
+
 const esquema = z.object({
-  SUPABASE_URL: z.url('SUPABASE_URL debe ser una URL absoluta'),
+  SUPABASE_URL: urlSupabase('SUPABASE_URL'),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
-  NEXT_PUBLIC_SUPABASE_URL: z.url('NEXT_PUBLIC_SUPABASE_URL debe ser una URL absoluta'),
+  NEXT_PUBLIC_SUPABASE_URL: urlSupabase('NEXT_PUBLIC_SUPABASE_URL'),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   // Secreto compartido con n8n: cabecera x-agente-secreto en /api/agente/*.
   AGENTE_SECRETO: z.string().min(24, 'AGENTE_SECRETO debe tener al menos 24 caracteres'),

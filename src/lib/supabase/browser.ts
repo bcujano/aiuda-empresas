@@ -1,4 +1,5 @@
 import { createBrowserClient } from '@supabase/ssr'
+import { origenSupabase } from '@/lib/env'
 
 /**
  * Cliente del navegador. La llave anónima es lo único que cruza al cliente,
@@ -6,7 +7,7 @@ import { createBrowserClient } from '@supabase/ssr'
  */
 export function supabaseBrowser() {
   return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    origenSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL as string),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
   )
 }

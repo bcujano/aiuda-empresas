@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { type NextRequest, NextResponse } from 'next/server'
+import { origenSupabase } from '@/lib/env'
 
 /** Cookies de sesión de Supabase. Si están corruptas, hay que tirarlas. */
 function cookiesDeSesion(peticion: NextRequest): string[] {
@@ -22,7 +23,7 @@ export async function proxy(peticion: NextRequest) {
   const ruta = peticion.nextUrl.pathname
 
   const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL as string,
+    origenSupabase(process.env.NEXT_PUBLIC_SUPABASE_URL as string),
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string,
     {
       cookies: {
