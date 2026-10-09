@@ -43,7 +43,15 @@ export async function landingPorSlug(
 }
 
 /** Direcciones que ya son pantallas del sistema: un cliente no puede tomarlas. */
-const RUTAS_RESERVADAS = new Set(['panel', 'login', 'api', 'vista-previa', '_next'])
+const RUTAS_RESERVADAS = new Set([
+  'panel',
+  'login',
+  'api',
+  'vista-previa',
+  '_next',
+  'privacidad',
+  'eliminacion-de-datos',
+])
 
 export const esquemaNuevaOrganizacion = z.object({
   nombre: z.string().trim().min(2, 'Escribe el nombre del cliente.'),
