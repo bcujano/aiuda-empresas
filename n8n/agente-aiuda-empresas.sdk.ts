@@ -1,6 +1,10 @@
-import { workflow, node, trigger, languageModel, memory, ifElse, expr } from '@n8n/workflow-sdk';
+import { workflow, node, trigger, languageModel, memory, ifElse, switchCase, expr } from '@n8n/workflow-sdk';
 
 const CRM = 'https://aiuda-empresas.vercel.app';
+const CW = 'https://chatwoot-production-8564.up.railway.app/api/v1/accounts';
+const credCrm = { httpHeaderAuth: { id: 'UDLkIFYmIOTGYKKj', name: 'CRM Aiuda Empresas' } };
+const credCw = { httpHeaderAuth: { id: 'JUdPITdOVffodNzC', name: 'Chatwoot Fagal API' } };
+const credWa = { httpHeaderAuth: { id: '8BXtTKC3qbdMCDoM', name: 'Meta WhatsApp Fagal' } };
 
 const verificarGet = trigger({
   type: 'n8n-nodes-base.webhook',
@@ -9,7 +13,7 @@ const verificarGet = trigger({
     name: 'Verificación de Meta (GET)',
     parameters: { httpMethod: 'GET', path: 'aiuda-empresas-whatsapp', responseMode: 'responseNode' },
   },
-  output: [{ query: { 'hub.mode': 'subscribe', 'hub.verify_token': 'aiuda-empresas-2026', 'hub.challenge': '12345' } }],
+  output: [{ query: { 'hub.verify_token': 'aiuda-empresas-2026', 'hub.challenge': '12345' } }],
 });
 
 const tokenCorrecto = ifElse({
@@ -19,13 +23,7 @@ const tokenCorrecto = ifElse({
     parameters: {
       conditions: {
         options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
-        conditions: [
-          {
-            leftValue: expr('{{ $json.query["hub.verify_token"] }}'),
-            operator: { type: 'string', operation: 'equals' },
-            rightValue: 'aiuda-empresas-2026',
-          },
-        ],
+        conditions: [{ leftValue: expr('{{ $json.query["hub.verify_token"] }}'), operator: { type: 'string', operation: 'equals' }, rightValue: 'aiuda-empresas-2026' }],
         combinator: 'and',
       },
     },
@@ -35,20 +33,14 @@ const tokenCorrecto = ifElse({
 const responderReto = node({
   type: 'n8n-nodes-base.respondToWebhook',
   version: 1.5,
-  config: {
-    name: 'Responder reto',
-    parameters: { respondWith: 'text', responseBody: expr('{{ $json.query["hub.challenge"] }}') },
-  },
+  config: { name: 'Responder reto', parameters: { respondWith: 'text', responseBody: expr('{{ $json.query["hub.challenge"] }}') } },
   output: [{}],
 });
 
 const rechazar = node({
   type: 'n8n-nodes-base.respondToWebhook',
   version: 1.5,
-  config: {
-    name: 'Rechazar verificación',
-    parameters: { respondWith: 'text', responseBody: 'token inválido', options: { responseCode: 403 } },
-  },
+  config: { name: 'Rechazar verificación', parameters: { respondWith: 'text', responseBody: 'token inválido', options: { responseCode: 403 } } },
   output: [{}],
 });
 
@@ -59,7 +51,7 @@ const mensajeEntrante = trigger({
     name: 'Mensaje de WhatsApp (POST)',
     parameters: { httpMethod: 'POST', path: 'aiuda-empresas-whatsapp', responseMode: 'onReceived' },
   },
-  output: [{ body: { entry: [{ changes: [{ value: { metadata: { phone_number_id: '1417299348129209' }, contacts: [{ profile: { name: 'Ana' } }], messages: [{ from: '593991234567', id: 'wamid.1', type: 'text', text: { body: 'Hola (Ref. FAG-TRI)' } }] } }] }] } }],
+  output: [{ body: { entry: [{ changes: [{ value: { metadata: { phone_number_id: '1417299348129209' }, contacts: [{ profile: { name: 'Ana' } }], messages: [{ from: '593991234567', type: 'text', text: { body: 'Hola' } }] } }] }] } }],
 });
 
 const normalizar = node({
@@ -74,7 +66,7 @@ const normalizar = node({
         "for (const item of $input.all()) {\n" +
         "  const valor = item.json.body?.entry?.[0]?.changes?.[0]?.value ?? {};\n" +
         "  const msg = valor.messages?.[0];\n" +
-        "  if (!msg) continue; // estados de entrega, lecturas: no se responde\n" +
+        "  if (!msg) continue; // estados de entrega y lecturas: no se responde\n" +
         "  const texto = msg.text?.body ?? msg.button?.text ?? msg.interactive?.button_reply?.title ?? msg.interactive?.list_reply?.title ?? '';\n" +
         "  salida.push({ json: {\n" +
         "    phone_number_id: String(valor.metadata?.phone_number_id ?? ''),\n" +
@@ -82,7 +74,6 @@ const normalizar = node({
         "    nombre_perfil: valor.contacts?.[0]?.profile?.name ?? '',\n" +
         "    tipo: msg.type ?? 'desconocido',\n" +
         "    texto: texto || (msg.type === 'audio' ? '[Envió una nota de voz]' : '[Envió un archivo o imagen]'),\n" +
-        "    es_texto: Boolean(texto),\n" +
         "    referral: msg.referral ?? null,\n" +
         "    sesion: String(valor.metadata?.phone_number_id ?? '') + ':' + String(msg.from ?? ''),\n" +
         "  } });\n" +
@@ -90,7 +81,7 @@ const normalizar = node({
         "return salida;",
     },
   },
-  output: [{ phone_number_id: '1417299348129209', telefono: '593991234567', nombre_perfil: 'Ana', tipo: 'text', texto: 'Hola (Ref. FAG-TRI)', es_texto: true, referral: null, sesion: '1417299348129209:593991234567' }],
+  output: [{ phone_number_id: '1417299348129209', telefono: '593991234567', nombre_perfil: 'Ana', tipo: 'text', texto: 'Hola', referral: null, sesion: '1417299348129209:593991234567' }],
 });
 
 const contexto = node({
@@ -100,7 +91,7 @@ const contexto = node({
     name: 'Contexto del CRM',
     parameters: {
       method: 'POST',
-      url: CRM + '/api/agente/contexto',
+      url: `${CRM}/api/agente/contexto`,
       authentication: 'genericCredentialType',
       genericAuthType: 'httpHeaderAuth',
       sendBody: true,
@@ -109,9 +100,174 @@ const contexto = node({
       jsonBody: expr('{{ JSON.stringify({ phone_number_id: $json.phone_number_id, telefono: $json.telefono, texto: $json.texto, referral: $json.referral ?? undefined }) }}'),
       options: { timeout: 15000 },
     },
-    credentials: { httpHeaderAuth: { id: 'UDLkIFYmIOTGYKKj', name: 'CRM Aiuda Empresas' } },
+    credentials: credCrm,
   },
-  output: [{ organizacion: { nombre: 'Fagal Abogados', especialista: 'un abogado', ciudad: null, codigo: 'FAG' }, servicios: [{ codigo: 'TRI', servicio: 'Defensa tributaria ante el SRI', para_quien: [], no_para_quien: [] }], conocimiento: {}, angulo_detectado: 'TRI', lead: null, ventana_abierta: true }],
+  output: [{ organizacion: { nombre: 'Fagal Abogados', especialista: 'un abogado', codigo: 'FAG' }, servicios: [], conocimiento: {}, angulo_detectado: null, lead: null, ventana_abierta: true, canal: { chatwoot_cuenta_id: 4, chatwoot_bandeja_id: 6 } }],
+});
+
+const planChatwoot = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Plan de Chatwoot',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode:
+        "const ctx = $input.first().json;\n" +
+        "const entrada = $('Normalizar mensaje').first().json;\n" +
+        "const canal = ctx.canal;\n" +
+        "const conv = ctx.lead?.chatwoot_conversacion_id ?? null;\n" +
+        "const modo = !canal ? 'sin_chatwoot' : conv ? 'conocida' : 'nueva';\n" +
+        "return [{ json: { modo, cuenta: canal?.chatwoot_cuenta_id ?? null, bandeja: canal?.chatwoot_bandeja_id ?? null, conversacion_id: conv, contacto_id: ctx.lead?.chatwoot_contacto_id ?? null, telefono_e164: '+' + entrada.telefono.replace(/\\D/g, ''), nombre: entrada.nombre_perfil || ('+' + entrada.telefono), texto: entrada.texto, nueva: false } }];",
+    },
+  },
+  output: [{ modo: 'nueva', cuenta: 4, bandeja: 6, conversacion_id: null, contacto_id: null, telefono_e164: '+593991234567', nombre: 'Ana', texto: 'Hola', nueva: false }],
+});
+
+const rutaChatwoot = switchCase({
+  version: 3.2,
+  config: {
+    name: '¿Cómo va a Chatwoot?',
+    parameters: {
+      rules: {
+        values: [
+          { outputKey: 'conocida', conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict' }, conditions: [{ leftValue: expr('{{ $json.modo }}'), operator: { type: 'string', operation: 'equals' }, rightValue: 'conocida' }], combinator: 'and' } },
+          { outputKey: 'nueva', conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict' }, conditions: [{ leftValue: expr('{{ $json.modo }}'), operator: { type: 'string', operation: 'equals' }, rightValue: 'nueva' }], combinator: 'and' } },
+          { outputKey: 'sin_chatwoot', conditions: { options: { caseSensitive: true, leftValue: '', typeValidation: 'strict' }, conditions: [{ leftValue: expr('{{ $json.modo }}'), operator: { type: 'string', operation: 'equals' }, rightValue: 'sin_chatwoot' }], combinator: 'and' } },
+        ],
+      },
+    },
+  },
+});
+
+const crearContacto = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: crear contacto',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $json.cuenta }}/contacts`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify({ inbox_id: $json.bandeja, name: $json.nombre, phone_number: $json.telefono_e164 }) }}'),
+      options: { response: { response: { neverError: true } } },
+    },
+    credentials: credCw,
+  },
+  output: [{ payload: { contact: { id: 1 } } }],
+});
+
+const buscarContacto = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: buscar contacto',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'GET',
+      url: expr(`${CW}/{{ $('Plan de Chatwoot').first().json.cuenta }}/contacts/search?q={{ encodeURIComponent($('Plan de Chatwoot').first().json.telefono_e164) }}`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      options: { response: { response: { neverError: true } } },
+    },
+    credentials: credCw,
+  },
+  output: [{ payload: [{ id: 1 }] }],
+});
+
+const crearConversacion = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: crear conversación',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $('Plan de Chatwoot').first().json.cuenta }}/conversations`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ inbox_id: $('Plan de Chatwoot').first().json.bandeja, contact_id: $('Chatwoot: crear contacto').first().json.payload?.contact?.id ?? $json.payload?.[0]?.id }) }}"),
+    },
+    credentials: credCw,
+  },
+  output: [{ id: 10 }],
+});
+
+const conversacionLista = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Conversación nueva lista',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode:
+        "const plan = $('Plan de Chatwoot').first().json;\n" +
+        "const creado = $('Chatwoot: crear contacto').first().json.payload?.contact?.id;\n" +
+        "const buscado = $('Chatwoot: buscar contacto').first().json.payload?.[0]?.id;\n" +
+        "return [{ json: { ...plan, conversacion_id: $input.first().json.id, contacto_id: creado ?? buscado ?? null, nueva: true } }];",
+    },
+  },
+  output: [{ modo: 'nueva', cuenta: 4, bandeja: 6, conversacion_id: 10, contacto_id: 1, telefono_e164: '+593991234567', nombre: 'Ana', texto: 'Hola', nueva: true }],
+});
+
+const publicarEntrante = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: publicar mensaje del cliente',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $json.cuenta }}/conversations/{{ $json.conversacion_id }}/messages`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify({ content: $json.texto, message_type: "incoming", private: false }) }}'),
+    },
+    credentials: credCw,
+  },
+  output: [{ id: 100 }],
+});
+
+const leerConversacion = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: leer etiquetas',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'GET',
+      url: expr(`${CW}/{{ $('Plan de Chatwoot').first().json.cuenta }}/conversations/{{ $('Chatwoot: publicar mensaje del cliente').first().json.conversation_id ?? $('Plan de Chatwoot').first().json.conversacion_id }}`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+    },
+    credentials: credCw,
+  },
+  output: [{ id: 10, labels: [] }],
+});
+
+const sinPersona = ifElse({
+  version: 2.2,
+  config: {
+    name: '¿Sin persona a cargo?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr("{{ ($json.labels ?? []).includes('humano') }}"), operator: { type: 'boolean', operation: 'false', singleValue: true } }],
+        combinator: 'and',
+      },
+    },
+  },
 });
 
 const gemini = languageModel({
@@ -139,11 +295,7 @@ const memoria = memory({
   version: 1.4,
   config: {
     name: 'Memoria de la conversación',
-    parameters: {
-      sessionIdType: 'customKey',
-      sessionKey: expr("{{ $('Normalizar mensaje').item.json.sesion }}"),
-      contextWindowLength: 20,
-    },
+    parameters: { sessionIdType: 'customKey', sessionKey: expr("{{ $('Normalizar mensaje').first().json.sesion }}"), contextWindowLength: 20 },
   },
 });
 
@@ -154,18 +306,18 @@ const agente = node({
     name: 'Agente Aiuda Empresas',
     parameters: {
       promptType: 'define',
-      text: expr("{{ $('Normalizar mensaje').item.json.texto }}"),
+      text: expr("{{ $('Normalizar mensaje').first().json.texto }}"),
       needsFallback: true,
       options: {
         maxIterations: 3,
         systemMessage: expr(
-          'Eres el asistente virtual de {{ $json.organizacion.nombre }} en WhatsApp. Atiendes a empresas que quieren una reunión con {{ $json.organizacion.especialista }}.\n\n' +
-          'SERVICIOS (solo estos existen): {{ JSON.stringify($json.servicios) }}\n' +
-          'INFORMACIÓN DEL CLIENTE CARGADA POR EL EQUIPO: {{ JSON.stringify($json.conocimiento) }}\n' +
-          'SERVICIO POR EL QUE LLEGÓ (código): {{ $json.angulo_detectado ?? "desconocido" }}\n' +
-          'LO QUE YA SABEMOS DE ESTA PERSONA: {{ JSON.stringify($json.lead) }}\n' +
-          'Nombre de perfil de WhatsApp: {{ $("Normalizar mensaje").item.json.nombre_perfil }}\n' +
-          'Fecha y hora en Quito: {{ $now.setZone("America/Guayaquil").toFormat("cccc d LLLL yyyy, HH:mm", { locale: "es" }) }}\n\n' +
+          "Eres el asistente virtual de {{ $('Contexto del CRM').first().json.organizacion.nombre }} en WhatsApp. Atiendes a empresas que quieren una reunión con {{ $('Contexto del CRM').first().json.organizacion.especialista }}.\n\n" +
+          "SERVICIOS (solo estos existen): {{ JSON.stringify($('Contexto del CRM').first().json.servicios) }}\n" +
+          "INFORMACIÓN DEL CLIENTE CARGADA POR EL EQUIPO: {{ JSON.stringify($('Contexto del CRM').first().json.conocimiento) }}\n" +
+          "SERVICIO POR EL QUE LLEGÓ (código): {{ $('Contexto del CRM').first().json.angulo_detectado ?? 'desconocido' }}\n" +
+          "LO QUE YA SABEMOS DE ESTA PERSONA: {{ JSON.stringify($('Contexto del CRM').first().json.lead) }}\n" +
+          "Nombre de perfil de WhatsApp: {{ $('Normalizar mensaje').first().json.nombre_perfil }}\n" +
+          "Fecha y hora en Quito: {{ $now.setZone('America/Guayaquil').toFormat('cccc d LLLL yyyy, HH:mm', { locale: 'es' }) }}\n\n" +
           'OBJETIVO: entender en pocas preguntas qué necesita la empresa y, si encaja, dejar lista la reunión.\n\n' +
           'REGLAS:\n' +
           '1. Español de Ecuador, trato de usted, cordial y profesional. Mensajes cortos (máximo 3 frases) y una sola pregunta por mensaje.\n' +
@@ -184,7 +336,7 @@ const agente = node({
     },
     subnodes: { model: [gemini, openai], memory: memoria },
   },
-  output: [{ output: '{"respuesta":"Hola, gracias por escribir. ¿Me ayuda con su nombre y el de su empresa?","datos":{"nombre":null}}' }],
+  output: [{ output: '{"respuesta":"Hola, ¿me ayuda con su nombre y el de su empresa?","datos":{}}' }],
 });
 
 const leerRespuesta = node({
@@ -196,9 +348,12 @@ const leerRespuesta = node({
       mode: 'runOnceForAllItems',
       jsCode:
         "const entrada = $('Normalizar mensaje').first().json;\n" +
+        "const plan = $('Plan de Chatwoot').first().json;\n" +
+        "let cw = plan;\n" +
+        "try { if ($('Conversación nueva lista').isExecuted) cw = $('Conversación nueva lista').first().json; } catch (e) {}\n" +
         "const crudo = String($input.first().json.output ?? '').replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '').trim();\n" +
         "let respuesta = crudo; let datos = {};\n" +
-        "try { const p = JSON.parse(crudo.slice(crudo.indexOf('{'), crudo.lastIndexOf('}') + 1)); respuesta = String(p.respuesta ?? '').trim(); datos = p.datos ?? {}; } catch (e) { /* texto plano: se manda tal cual */ }\n" +
+        "try { const p = JSON.parse(crudo.slice(crudo.indexOf('{'), crudo.lastIndexOf('}') + 1)); respuesta = String(p.respuesta ?? '').trim(); datos = p.datos ?? {}; } catch (e) {}\n" +
         "if (!respuesta) respuesta = 'Gracias por escribir. En un momento le ayudamos.';\n" +
         "const limpio = {};\n" +
         "for (const c of ['nombre','empresa','cargo','ciudad','necesidad','motivo_descarte']) { if (typeof datos[c] === 'string' && datos[c].trim()) limpio[c] = datos[c].trim().slice(0, c === 'necesidad' ? 500 : 160); }\n" +
@@ -210,13 +365,145 @@ const leerRespuesta = node({
         "const cuerpo_crm = { phone_number_id: entrada.phone_number_id, telefono: entrada.telefono, texto: entrada.texto, mensaje_entrante: entrada.texto, mensaje_agente: respuesta, ...limpio };\n" +
         "if (entrada.referral) cuerpo_crm.referral = entrada.referral;\n" +
         "if (!limpio.nombre && entrada.nombre_perfil) cuerpo_crm.nombre = String(entrada.nombre_perfil).slice(0, 120);\n" +
-        "return [{ json: { respuesta, telefono: entrada.telefono, phone_number_id: entrada.phone_number_id, cuerpo_crm } }];",
+        "if (cw.nueva && cw.conversacion_id) { cuerpo_crm.chatwoot_conversacion_id = cw.conversacion_id; if (cw.contacto_id) cuerpo_crm.chatwoot_contacto_id = cw.contacto_id; }\n" +
+        "return [{ json: { respuesta, telefono: entrada.telefono, phone_number_id: entrada.phone_number_id, cuenta: cw.cuenta, conversacion_id: cw.conversacion_id, por_chatwoot: Boolean(cw.cuenta && cw.conversacion_id), cuerpo_crm } }];",
     },
   },
-  output: [{ respuesta: 'Hola, ¿me ayuda con su nombre?', telefono: '593991234567', phone_number_id: '1417299348129209', cuerpo_crm: { phone_number_id: '1417299348129209', telefono: '593991234567' } }],
+  output: [{ respuesta: 'Hola', telefono: '593991234567', phone_number_id: '1417299348129209', cuenta: 4, conversacion_id: 10, por_chatwoot: true, cuerpo_crm: {} }],
 });
 
-const enviarWhatsApp = node({
+const porChatwoot = ifElse({
+  version: 2.2,
+  config: {
+    name: '¿Sale por Chatwoot?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr('{{ $json.por_chatwoot }}'), operator: { type: 'boolean', operation: 'true', singleValue: true } }],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const publicarRespuesta = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: publicar respuesta del agente',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $json.cuenta }}/conversations/{{ $json.conversacion_id }}/messages`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify({ content: $json.respuesta, message_type: "outgoing", private: false }) }}'),
+    },
+    credentials: credCw,
+  },
+  output: [{ id: 101 }],
+});
+
+const enviarDirecto = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Enviar por WhatsApp (sin Chatwoot)',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr('https://graph.facebook.com/v22.0/{{ $json.phone_number_id }}/messages'),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify({ messaging_product: "whatsapp", to: $json.telefono, type: "text", text: { body: $json.respuesta } }) }}'),
+    },
+    credentials: credWa,
+  },
+  output: [{ messages: [{ id: 'wamid.x' }] }],
+});
+
+const guardarCrm = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Guardar lead en el CRM',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: `${CRM}/api/agente/lead`,
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify($json.cuerpo_crm) }}'),
+      options: { timeout: 15000 },
+    },
+    credentials: credCrm,
+  },
+  output: [{ ok: true }],
+});
+
+const desdeChatwoot = trigger({
+  type: 'n8n-nodes-base.webhook',
+  version: 2.1,
+  config: {
+    name: 'Respuesta desde Chatwoot (POST)',
+    parameters: { httpMethod: 'POST', path: 'aiuda-empresas-chatwoot', responseMode: 'onReceived' },
+  },
+  output: [{ body: { event: 'message_created', message_type: 'outgoing', private: false, content: 'Hola', sender: { id: 12, name: 'Agente Fagal' }, inbox: { id: 6 }, account: { id: 4 }, conversation: { id: 10, labels: [], meta: { sender: { phone_number: '+593991234567' } } } } }],
+});
+
+const filtrarSaliente = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Solo respuestas públicas',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode:
+        "const b = $input.first().json.body ?? {};\n" +
+        "const saliente = b.message_type === 'outgoing' || b.message_type === 1;\n" +
+        "if (b.event !== 'message_created' || !saliente || b.private || !String(b.content ?? '').trim()) return [];\n" +
+        "const remitente = b.sender?.name ?? '';\n" +
+        "return [{ json: {\n" +
+        "  cuenta: b.account?.id, bandeja: b.inbox?.id, conversacion_id: b.conversation?.id,\n" +
+        "  etiquetas: b.conversation?.labels ?? [],\n" +
+        "  telefono_payload: String(b.conversation?.meta?.sender?.phone_number ?? '').replace(/\\D/g, ''),\n" +
+        "  contenido: String(b.content), remitente,\n" +
+        "  es_agente: remitente.startsWith('Agente '),\n" +
+        "} }];",
+    },
+  },
+  output: [{ cuenta: 4, bandeja: 6, conversacion_id: 10, etiquetas: [], telefono_payload: '593991234567', contenido: 'Hola', remitente: 'Agente Fagal', es_agente: true }],
+});
+
+const canal = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Canal del CRM',
+    parameters: {
+      method: 'POST',
+      url: `${CRM}/api/agente/canal`,
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify({ chatwoot_bandeja_id: $json.bandeja, chatwoot_conversacion_id: $json.conversacion_id }) }}'),
+    },
+    credentials: credCrm,
+  },
+  output: [{ phone_number_id: '1417299348129209', telefono: '+593991234567' }],
+});
+
+const enviarDesdeChatwoot = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.5,
   config: {
@@ -230,33 +517,67 @@ const enviarWhatsApp = node({
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr('{{ JSON.stringify({ messaging_product: "whatsapp", to: $json.telefono, type: "text", text: { body: $json.respuesta } }) }}'),
+      jsonBody: expr("{{ JSON.stringify({ messaging_product: 'whatsapp', to: $('Solo respuestas públicas').first().json.telefono_payload || String($json.telefono ?? '').replace(/\\D/g, ''), type: 'text', text: { body: $('Solo respuestas públicas').first().json.contenido } }) }}"),
     },
-    credentials: { httpHeaderAuth: { id: '8BXtTKC3qbdMCDoM', name: 'Meta WhatsApp Fagal' } },
+    credentials: credWa,
   },
-  output: [{ messages: [{ id: 'wamid.x' }] }],
+  output: [{ messages: [{ id: 'wamid.y' }] }],
 });
 
-const guardarCrm = node({
+const esPersona = ifElse({
+  version: 2.2,
+  config: {
+    name: '¿Escribió una persona?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr("{{ $('Solo respuestas públicas').first().json.es_agente }}"), operator: { type: 'boolean', operation: 'false', singleValue: true } }],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const etiquetaHumano = node({
   type: 'n8n-nodes-base.httpRequest',
   version: 4.5,
   config: {
-    name: 'Guardar lead en el CRM',
+    name: 'Chatwoot: etiqueta humano',
     onError: 'continueRegularOutput',
     parameters: {
       method: 'POST',
-      url: CRM + '/api/agente/lead',
+      url: expr(`${CW}/{{ $('Solo respuestas públicas').first().json.cuenta }}/conversations/{{ $('Solo respuestas públicas').first().json.conversacion_id }}/labels`),
       authentication: 'genericCredentialType',
       genericAuthType: 'httpHeaderAuth',
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr('{{ JSON.stringify($json.cuerpo_crm) }}'),
-      options: { timeout: 15000 },
+      jsonBody: expr("{{ JSON.stringify({ labels: [...new Set([...($('Solo respuestas públicas').first().json.etiquetas || []), 'humano'])] }) }}"),
     },
-    credentials: { httpHeaderAuth: { id: 'UDLkIFYmIOTGYKKj', name: 'CRM Aiuda Empresas' } },
+    credentials: credCw,
   },
-  output: [{ ok: true, lead_id: 'x', etapa: 'nuevo' }],
+  output: [{ payload: ['humano'] }],
+});
+
+const registrarPersona = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Guardar respuesta de la persona en el CRM',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: `${CRM}/api/agente/lead`,
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Canal del CRM').first().json.telefono || ('+' + $('Solo respuestas públicas').first().json.telefono_payload), mensaje_persona: $('Solo respuestas públicas').first().json.contenido, autor_persona: $('Solo respuestas públicas').first().json.remitente }) }}"),
+    },
+    credentials: credCrm,
+  },
+  output: [{ ok: true }],
 });
 
 export default workflow('aiuda-empresas-agente', 'Aiuda Empresas · Agente WhatsApp')
@@ -265,8 +586,21 @@ export default workflow('aiuda-empresas-agente', 'Aiuda Empresas · Agente Whats
   .add(mensajeEntrante)
   .to(normalizar)
   .to(contexto)
-  .to(agente)
+  .to(planChatwoot)
+  .to(rutaChatwoot
+    .onCase(0, publicarEntrante)
+    .onCase(1, crearContacto.to(buscarContacto).to(crearConversacion).to(conversacionLista).to(publicarEntrante))
+    .onCase(2, agente))
+  .add(publicarEntrante)
+  .to(leerConversacion)
+  .to(sinPersona.onTrue(agente))
+  .add(agente)
   .to(leerRespuesta)
-  .to(enviarWhatsApp)
+  .to(porChatwoot.onTrue(publicarRespuesta).onFalse(enviarDirecto))
   .add(leerRespuesta)
-  .to(guardarCrm);
+  .to(guardarCrm)
+  .add(desdeChatwoot)
+  .to(filtrarSaliente)
+  .to(canal)
+  .to(enviarDesdeChatwoot)
+  .to(esPersona.onTrue(etiquetaHumano.to(registrarPersona)));
