@@ -147,8 +147,8 @@ const gemini = languageModel({
   type: '@n8n/n8n-nodes-langchain.lmChatGoogleGemini',
   version: 1.1,
   config: {
-    name: 'Gemini (principal)',
-    parameters: { modelName: 'models/gemini-3.8-flash', options: { temperature: 0.4 } },
+    name: 'Gemini gratis (principal)',
+    parameters: { modelName: 'models/gemini-3.1-flash-lite', options: { temperature: 0.4 } },
     credentials: { googlePalmApi: { id: 'jbOxhXuz7QS5IefQ', name: 'Gemini Aiuda' } },
   },
 });

@@ -11,7 +11,7 @@
    `https://primary-production-ed243.up.railway.app/webhook/aiuda-empresas-chatwoot`.
 3. n8n → `POST /api/agente/canal` (el CRM reconoce al cliente por `chatwoot_cuenta_id`)
    → si la conversación no tiene la etiqueta `humano`: `POST /api/agente/contexto`
-   → agente (Gemini 3.8 Flash; respaldo `gpt-4.1-mini`; memoria de 20 mensajes por número)
+   → agente (Gemini 3.1 Flash-Lite, del plan gratis; respaldo `gpt-4.1-mini`; memoria de 20 mensajes por número)
    → JSON `{respuesta, datos}` → se publica en Chatwoot como «Agente <Cliente>» (Chatwoot lo
    manda a WhatsApp) → `POST /api/agente/lead`.
 4. Si responde una persona del equipo (remitente que no se llama «Agente …»): etiqueta
