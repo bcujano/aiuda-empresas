@@ -1,33 +1,30 @@
 # n8n · Agente de WhatsApp
 
-- Workflow: **Aiuda Empresas · Agente WhatsApp** (`EOaQbhAVaTex3XDI`), activo. Versión 2 con Chatwoot; la v1 (`hyleQMHMu34muR8Q`) quedó archivada.
+- Workflow: **Aiuda Empresas · Agente WhatsApp** (`2GNz6M8oB5a06wuH`), activo. Versión 3.
+  Archivadas: v2 (`EOaQbhAVaTex3XDI`) y v1 (`hyleQMHMu34muR8Q`).
   Fuente: `agente-aiuda-empresas.sdk.ts` (SDK de n8n). Se cambia por MCP, nunca reimportando.
-- Webhook para Meta (callback): `https://primary-production-ed243.up.railway.app/webhook/aiuda-empresas-whatsapp`
-  · token de verificación: `aiuda-empresas-2026` · campo suscrito: `messages`.
-- Flujo: mensaje → normalizar → `POST /api/agente/contexto` (organización por `phone_number_id`)
-  → agente (Gemini 2.5 Flash; respaldo `gpt-4.1-mini`; memoria de 20 mensajes por número)
-  → JSON `{respuesta, datos}` → en paralelo: enviar por WhatsApp y `POST /api/agente/lead`.
-- Credenciales (por nombre, nunca en el repo): `CRM Aiuda Empresas` (x-agente-secreto),
-  `Meta WhatsApp Fagal` (Bearer), `Gemini Aiuda`, `OpenAi account`.
-- Probado 2026-10-10: verificación GET 200 con token correcto, 403 con token malo; avisos de
-  estado (sin `messages`) no responden nada.
 
-## Chatwoot (v2)
-- Cada cliente tiene su cuenta de Chatwoot y una bandeja de tipo **API** (Fagal: cuenta 4, bandeja 6),
-  guardadas en `organizaciones.chatwoot_cuenta_id` / `chatwoot_bandeja_id`.
-- Mensaje del cliente → se publica como entrante en su conversación (se crea una sola vez y
-  queda en `leads.chatwoot_conversacion_id`) → si la conversación tiene la etiqueta `humano`,
-  el agente no responde.
-- La respuesta del agente se publica como saliente en Chatwoot; Chatwoot la manda al webhook
-  de la bandeja (`/webhook/aiuda-empresas-chatwoot`) y n8n la envía por WhatsApp. Las
-  respuestas manuales siguen el mismo camino: si el remitente no se llama «Agente …», se pone
-  la etiqueta `humano` y el mensaje queda en la actividad del lead.
-- Convención: el usuario del agente en cada cuenta de Chatwoot se llama «Agente <Cliente>».
-- Credencial `Chatwoot Fagal API` (api_access_token del usuario «Agente Fagal», id 12).
+## Esquema (el mismo de 321, Laundry y Academy)
+1. Meta entrega los mensajes a la bandeja **WhatsApp Cloud** de Chatwoot del cliente
+   (en la app de Meta van la URL de webhook y el token que muestra esa bandeja).
+2. Chatwoot avisa a n8n con el webhook **de la cuenta** (evento «Mensaje creado»):
+   `https://primary-production-ed243.up.railway.app/webhook/aiuda-empresas-chatwoot`.
+3. n8n → `POST /api/agente/canal` (el CRM reconoce al cliente por `chatwoot_cuenta_id`)
+   → si la conversación no tiene la etiqueta `humano`: `POST /api/agente/contexto`
+   → agente (Gemini 2.5 Flash; respaldo `gpt-4.1-mini`; memoria de 20 mensajes por número)
+   → JSON `{respuesta, datos}` → se publica en Chatwoot como «Agente <Cliente>» (Chatwoot lo
+   manda a WhatsApp) → `POST /api/agente/lead`.
+4. Si responde una persona del equipo (remitente que no se llama «Agente …»): etiqueta
+   `humano` (el agente calla) y el mensaje queda en la actividad del lead.
+
+- Fagal: cuenta de Chatwoot 4, usuario «Agente Fagal» (id 12).
+- Credenciales (por nombre, nunca en el repo): `CRM Aiuda Empresas` (x-agente-secreto),
+  `Chatwoot Fagal API` (api_access_token de «Agente Fagal»), `Gemini Aiuda`, `OpenAi account`.
+- Con este esquema se pierde el `referral` del anuncio: el ángulo sale de la referencia
+  del mensaje (`Ref. FAG-TRI`).
 
 ## Pendiente
-- Credencial de WhatsApp por organización (hoy el envío usa la de Fagal): al sumar el cliente #2,
-  el token va por organización.
+- Credencial de Chatwoot por organización (hoy usa la de Fagal): al sumar el cliente #2.
 - Agenda real con Google Calendar (hoy pide horarios y el equipo confirma).
 - Aviso a Fagal cuando un lead queda calificado.
 - Notas de voz (hoy pide escribirlo).
