@@ -1,4 +1,4 @@
-import { workflow, node, trigger, languageModel, ifElse, expr } from '@n8n/workflow-sdk';
+import { workflow, node, trigger, languageModel, tool, ifElse, expr } from '@n8n/workflow-sdk';
 
 const CRM = 'https://aiuda-empresas.vercel.app';
 const CW = 'https://chatwoot-production-8564.up.railway.app/api/v1/accounts';
@@ -229,6 +229,48 @@ const openai = languageModel({
   },
 });
 
+const verHorarios = tool({
+  type: 'n8n-nodes-base.httpRequestTool',
+  version: 4.5,
+  config: {
+    name: 'ver_horarios',
+    parameters: {
+      toolDescription: "Devuelve las horas libres reales de la agenda del estudio (lista 'espacios' con 'inicia_at' y 'etiqueta'), las modalidades y la dirección. Úsala SIEMPRE antes de ofrecer o mencionar cualquier fecha u hora.",
+      method: 'POST',
+      url: `${CRM}/api/agente/disponibilidad`,
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono }) }}"),
+      options: { timeout: 15000 },
+    },
+    credentials: credCrm,
+  },
+});
+
+const agendarCita = tool({
+  type: 'n8n-nodes-base.httpRequestTool',
+  version: 4.5,
+  config: {
+    name: 'agendar_cita',
+    parameters: {
+      toolDescription: 'Reserva la reunión en la agenda (si la persona ya tenía una, la reprograma). Recibe inicia_at EXACTO de una opción devuelta por ver_horarios y la modalidad. Devuelve ok=true con la etiqueta de la hora reservada, u ok=false con otras horas libres.',
+      method: 'POST',
+      url: `${CRM}/api/agente/agendar`,
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, inicia_at: $fromAI('inicia_at', 'Valor inicia_at exacto (ISO) de la hora elegida, copiado de ver_horarios', 'string'), modalidad: $fromAI('modalidad', 'virtual o presencial', 'string') }) }}"),
+      options: { timeout: 15000 },
+    },
+    credentials: credCrm,
+  },
+});
+
 const agente = node({
   type: '@n8n/n8n-nodes-langchain.agent',
   version: 3.1,
@@ -239,33 +281,38 @@ const agente = node({
       text: expr("{{ $('Juntar mensajes seguidos').first().json.texto }}"),
       needsFallback: true,
       options: {
-        maxIterations: 3,
+        maxIterations: 5,
         systemMessage: expr(
           "Eres el asistente virtual de {{ $('Contexto del CRM').first().json.organizacion.nombre }} en WhatsApp. Atiendes a empresas que quieren una reunión con {{ $('Contexto del CRM').first().json.organizacion.especialista }}.\n\n" +
           "SERVICIOS (solo estos existen): {{ JSON.stringify($('Contexto del CRM').first().json.servicios) }}\n" +
-          "INFORMACIÓN DEL CLIENTE CARGADA POR EL EQUIPO: {{ JSON.stringify($('Contexto del CRM').first().json.conocimiento) }}\n" +
+          "INFORMACIÓN DEL ESTUDIO (lo único que puedes afirmar sobre él): {{ JSON.stringify($('Contexto del CRM').first().json.conocimiento) }}\n" +
           "SERVICIO POR EL QUE LLEGÓ (código): {{ $('Contexto del CRM').first().json.angulo_detectado ?? 'desconocido' }}\n" +
           "LO QUE YA SABEMOS DE ESTA PERSONA: {{ JSON.stringify($('Contexto del CRM').first().json.lead) }}\n" +
+          "REUNIÓN VIGENTE: {{ JSON.stringify($('Contexto del CRM').first().json.cita_vigente ?? null) }}\n" +
           "CONVERSACIÓN ANTERIOR (de la más antigua a la más reciente; 'equipo' es una persona del estudio): {{ JSON.stringify($('Contexto del CRM').first().json.historial ?? []) }}\n" +
-          "Nombre de perfil de WhatsApp: {{ $('Clasificar mensaje').first().json.nombre_perfil }}\n" +
-          "Fecha y hora en Quito: {{ $now.setZone('America/Guayaquil').toFormat('cccc d LLLL yyyy, HH:mm', { locale: 'es' }) }}\n\n" +
-          'OBJETIVO: entender en pocas preguntas qué necesita la empresa y, si encaja, dejar lista la reunión.\n\n' +
+          "Nombre del perfil de WhatsApp (puede no ser su nombre real): {{ $('Clasificar mensaje').first().json.nombre_perfil }}\n" +
+          "Fecha y hora actual en Quito: {{ $now.setZone('America/Guayaquil').toFormat('cccc d LLLL yyyy, HH:mm', { locale: 'es' }) }}\n\n" +
+          'OBJETIVO: entender en pocas preguntas qué necesita la empresa y, si encaja, dejar la reunión reservada en la agenda.\n\n' +
           'REGLAS:\n' +
           '1. Español de Ecuador, trato de usted, cordial y profesional. Mensajes cortos (máximo 3 frases) y una sola pregunta por mensaje.\n' +
           '2. Nunca das asesoría legal, ni opinas sobre el caso, ni prometes resultados, ni das honorarios. Si preguntan precio: los honorarios los define el abogado según el caso, en la reunión.\n' +
           '3. Nunca pides detalles del caso, documentos ni datos sensibles. Solo pides, de a uno: nombre, empresa, cargo, número de colaboradores, ciudad y en una frase qué tema necesita resolver y qué tan urgente es.\n' +
-          '4. Si la persona es un particular, un trabajador contra su empleador o algo de la lista no_para_quien, explica con amabilidad que este canal atiende empresas y cierra; marca etapa descartado con el motivo.\n' +
-          '5. No inventes datos del estudio (dirección, años, nombres de abogados, horarios). Si no están en la información cargada, di que el equipo lo confirma.\n' +
-          '6. Si preguntan si eres una persona, di con claridad que eres un asistente virtual.\n' +
-          '7. Cuando tengas empresa, cargo, colaboradores y la necesidad, y el tema encaje con un servicio: marca etapa calificado, pide dos o tres horarios que le acomoden para una reunión y avisa que el equipo le confirma la hora por este mismo WhatsApp. No confirmes tú una hora.\n' +
-          '8. Si el mensaje dice [Envió una nota de voz] o [Envió un archivo o imagen], pide amablemente que lo escriba en texto.\n\n' +
-          'FORMATO: responde SOLO con un JSON válido, sin texto antes ni después y sin bloques de código:\n' +
+          '4. Llama a la persona solo por el nombre que ella te dijo en la conversación. Si no lo ha dicho, no uses ningún nombre (el del perfil de WhatsApp puede ser de otra persona).\n' +
+          '5. Si la persona es un particular, un trabajador contra su empleador o algo de la lista no_para_quien, explica con amabilidad que este canal atiende empresas y cierra; marca etapa descartado con el motivo.\n' +
+          '6. No inventes datos del estudio. Usa solo INFORMACIÓN DEL ESTUDIO; si algo no está ahí, di que el equipo lo confirma en la reunión.\n' +
+          '7. Si preguntan si eres una persona, di con claridad que eres un asistente virtual.\n' +
+          '8. AGENDA: nunca escribas una fecha u hora que no haya salido de la herramienta ver_horarios en este mismo turno. Cuando tengas empresa, cargo, colaboradores y la necesidad, y el tema encaje: marca etapa calificado, llama a ver_horarios y ofrece 3 opciones de días distintos con su etiqueta exacta, y pregunta si prefiere virtual o presencial (si es presencial, la dirección está en ver_horarios). Si pide un día u hora concreta, búscala en ver_horarios; si no está libre, dilo y ofrece las más cercanas.\n' +
+          '9. Cuando la persona elija una opción y la modalidad, llama a agendar_cita con el inicia_at exacto. Si devuelve ok=true, confirma con la etiqueta exacta que devolvió y di que el equipo del estudio la confirmará por este mismo WhatsApp. Si devuelve ok=false, ofrece las horas que devolvió. Nunca digas que la reunión está agendada sin ok=true.\n' +
+          '10. Si ya hay REUNIÓN VIGENTE y la persona quiere cambiarla, usa ver_horarios y agendar_cita (la reprograma). Si solo pregunta por ella, dile la etiqueta y si está por confirmar o confirmada.\n' +
+          '11. Si el mensaje dice [Envió una nota de voz] o [Envió un archivo o imagen], pide amablemente que lo escriba en texto.\n' +
+          '12. Si la persona se queja o se confunde, discúlpate una sola vez, en una frase, y sigue con el siguiente paso.\n\n' +
+          'FORMATO: tu respuesta final es SOLO un JSON válido, sin texto antes ni después y sin bloques de código:\n' +
           '{"respuesta":"mensaje para WhatsApp","datos":{"nombre":null,"empresa":null,"cargo":null,"colaboradores":null,"ciudad":null,"necesidad":null,"urgencia":null,"encaje":null,"etapa":null,"motivo_descarte":null}}\n' +
           'En datos pon solo lo que la persona dijo en esta conversación; lo demás va en null. colaboradores: "1-9", "10-49", "50-199" o "200+". urgencia: "baja", "media" o "alta". encaje: entero de 0 a 100 según qué tan bien encaja con los servicios. etapa: null, "calificado" o "descartado".',
         ),
       },
     },
-    subnodes: { model: [gemini, openai] },
+    subnodes: { model: [gemini, openai], tools: [verHorarios, agendarCita] },
   },
   output: [{ output: '{"respuesta":"Hola, ¿me ayuda con su nombre y el de su empresa?","datos":{}}' }],
 });

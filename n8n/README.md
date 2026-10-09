@@ -1,6 +1,6 @@
 # n8n · Agente de WhatsApp
 
-- Workflow: **Aiuda Empresas · Agente WhatsApp** (`5RutxNOf3IlhrvEk`), activo. Versión 4.
+- Workflow: **Aiuda Empresas · Agente WhatsApp** (`5RutxNOf3IlhrvEk`), activo. Versión 4.1 (agenda).
   Archivadas: v3 (`2GNz6M8oB5a06wuH`), v2 (`EOaQbhAVaTex3XDI`) y v1 (`hyleQMHMu34muR8Q`).
   Fuente: `agente-aiuda-empresas.sdk.ts` (SDK de n8n). Se cambia por MCP, nunca reimportando.
 
@@ -27,6 +27,31 @@
   `Chatwoot Fagal API` (api_access_token de «Agente Fagal»), `Gemini Aiuda`, `OpenAi account`.
 - Con este esquema se pierde el `referral` del anuncio: el ángulo sale de la referencia
   del mensaje (`Ref. FAG-TRI`).
+
+## Agenda (v4.1)
+- El agente tiene dos herramientas: `ver_horarios` (`POST /api/agente/disponibilidad`) y
+  `agendar_cita` (`POST /api/agente/agendar`). Nunca escribe una hora que no salió de la agenda;
+  la base impide dos citas cruzadas.
+- Workflow **Aiuda Empresas · Avisos y recordatorios de citas** (`dzUSrR0SDPPRqsCW`):
+  - Webhook `/webhook/aiuda-empresas-avisos` (cabecera `x-agente-secreto`, credencial
+    `CRM Aiuda Empresas`): el CRM avisa `cita_nueva`, `cita_reprogramada_cliente`,
+    `cita_confirmada`, `cita_movida_equipo`, `cita_cancelada_equipo`.
+  - Al equipo: correo (credencial `Gmail account`) y WhatsApp con la plantilla
+    `aviso_cita_equipo` al número `aviso_whatsapp`, con el enlace privado `/cita/<token>`
+    para confirmar, mover o cancelar.
+  - Al cliente: por Chatwoot si la ventana gratis está abierta; si no, plantilla
+    `cita_confirmada_cliente`.
+  - Cada 15 min pide `/api/agente/recordatorios` y envía el de 24 h y el de 2 h (Chatwoot o
+    plantilla `recordatorio_cita`), y marca cada uno como enviado.
+- Plantillas (UTILITY, español) — se crean a mano en WhatsApp Manager (la API las rechazó con
+  este token):
+  - `aviso_cita_equipo`: «Nueva reunión agendada por el asistente de {{1}}.\nCliente: {{2}}\n
+    Empresa: {{3}}\nTema: {{4}}\nFecha: {{5}} ({{6}})\nConfirme o cambie la hora en este
+    enlace: {{7}}\nGracias.»
+  - `recordatorio_cita`: «Le recordamos su reunión con {{1}}: {{2}} ({{3}}). Si necesita
+    cambiarla, responda a este mensaje.»
+  - `cita_confirmada_cliente`: «Su reunión con {{1}} quedó confirmada: {{2}} ({{3}}). Si
+    necesita cambiarla, responda a este mensaje.»
 
 ## Pendiente
 - Credencial de Chatwoot por organización (hoy usa la de Fagal): al sumar el cliente #2.
