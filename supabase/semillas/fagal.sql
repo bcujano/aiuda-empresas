@@ -3,9 +3,11 @@
 -- Los textos no prometen resultados (lo pidió Fagal) y no inventan datos del
 -- estudio: años, casos y ciudad llegan con el wizard. Los ajustes se hacen en el CRM.
 
-insert into organizaciones (slug, codigo, nombre, rubro, especialista)
-values ('fagal', 'FAG', 'Fagal Abogados', 'Estudio jurídico', 'un abogado')
-on conflict (slug) do nothing;
+-- wa_numero: número propio de Fagal en la WABA de Aiuda (Byron, 2026-10-10).
+-- El Phone Number ID se carga cuando Meta lo entregue (wa_phone_number_id).
+insert into organizaciones (slug, codigo, nombre, rubro, especialista, wa_numero)
+values ('fagal', 'FAG', 'Fagal Abogados', 'Estudio jurídico', 'un abogado', '+593992580707')
+on conflict (slug) do update set wa_numero = excluded.wa_numero;
 
 with org as (select id from organizaciones where slug = 'fagal')
 insert into angulos (organizacion_id, slug, codigo, servicio, titular, subtitulo, dolores,

@@ -26,8 +26,8 @@ Falta conectar Supabase y Vercel (Byron) y construir la fase 2 (wizard y agente)
 2. **Vercel** → importar el repo, nombre del proyecto **`aiuda-empresas`**
    (queda en `https://aiuda-empresas.vercel.app`; landing de Fagal: `/fagal/tributario`).
    Variables: las de `.env.example`. `AGENTE_SECRETO`: una cadena larga al azar.
-3. **WhatsApp de Fagal** → cuando esté el número: Phone Number ID, WABA ID y token del
-   usuario del sistema. La landing se publica sola cuando la organización tiene `wa_numero`.
+3. **WhatsApp de Fagal: +593 99 258 0707** (ya en la semilla: la landing queda publicada al
+   pegarla). Falta pasar Phone Number ID, WABA ID y token del usuario del sistema para el agente.
 
 ## Siguiente (fase 2)
 - Wizard de conocimiento para el admin del cliente.
