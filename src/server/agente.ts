@@ -47,7 +47,15 @@ export type Contexto = {
   angulo_detectado: string | null
   lead: Pick<
     Lead,
-    'nombre' | 'empresa' | 'cargo' | 'colaboradores' | 'necesidad' | 'urgencia' | 'etapa'
+    | 'nombre'
+    | 'empresa'
+    | 'cargo'
+    | 'colaboradores'
+    | 'necesidad'
+    | 'urgencia'
+    | 'etapa'
+    | 'chatwoot_contacto_id'
+    | 'chatwoot_conversacion_id'
   > | null
   ventana_abierta: boolean
   /** Dónde se copia la conversación para el equipo humano (null si no tiene Chatwoot). */
@@ -95,6 +103,8 @@ export async function contextoAgente(entrada: {
           necesidad: lead.necesidad,
           urgencia: lead.urgencia,
           etapa: lead.etapa,
+          chatwoot_contacto_id: lead.chatwoot_contacto_id,
+          chatwoot_conversacion_id: lead.chatwoot_conversacion_id,
         }
       : null,
     // Si escribe ahora, la ventana está abierta; si no hay lead aún, también.
@@ -120,6 +130,8 @@ const CAMPOS = [
   'necesidad',
   'urgencia',
   'encaje',
+  'chatwoot_contacto_id',
+  'chatwoot_conversacion_id',
 ] as const
 
 export async function registrarDesdeAgente(

@@ -61,6 +61,8 @@ export const esquemaLead = organizacion.extend({
   // Respuesta escrita a mano por una persona del equipo desde Chatwoot.
   mensaje_persona: z.string().max(4000).optional(),
   autor_persona: z.string().trim().max(120).optional(),
+  chatwoot_contacto_id: z.number().int().positive().optional(),
+  chatwoot_conversacion_id: z.number().int().positive().optional(),
 })
 
 /** Bandeja de Chatwoot de la que salió una respuesta manual. */

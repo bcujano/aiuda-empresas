@@ -100,6 +100,8 @@ export type Lead = {
   ultimo_inbound_at: string | null
   ventana_horas: 24 | 72
   notas: string | null
+  chatwoot_contacto_id: number | null
+  chatwoot_conversacion_id: number | null
   created_at: string
   updated_at: string
 }
