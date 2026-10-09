@@ -31,5 +31,4 @@
 ## Pendiente
 - Credencial de Chatwoot por organización (hoy usa la de Fagal): al sumar el cliente #2.
 - Agenda real con Google Calendar (hoy pide horarios y el equipo confirma).
-- Aviso a Fagal cuando un lead queda calificado.
 - Notas de voz (hoy pide escribirlo).
