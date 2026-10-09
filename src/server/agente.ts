@@ -50,6 +50,8 @@ export type Contexto = {
     'nombre' | 'empresa' | 'cargo' | 'colaboradores' | 'necesidad' | 'urgencia' | 'etapa'
   > | null
   ventana_abierta: boolean
+  /** Dónde se copia la conversación para el equipo humano (null si no tiene Chatwoot). */
+  canal: { chatwoot_cuenta_id: number; chatwoot_bandeja_id: number } | null
 }
 
 export async function contextoAgente(entrada: {
@@ -97,6 +99,13 @@ export async function contextoAgente(entrada: {
       : null,
     // Si escribe ahora, la ventana está abierta; si no hay lead aún, también.
     ventana_abierta: lead ? ventanaAbierta(lead.ultimo_inbound_at, lead.ventana_horas) : true,
+    canal:
+      org.chatwoot_cuenta_id && org.chatwoot_bandeja_id
+        ? {
+            chatwoot_cuenta_id: org.chatwoot_cuenta_id,
+            chatwoot_bandeja_id: org.chatwoot_bandeja_id,
+          }
+        : null,
   }
 }
 
@@ -173,6 +182,11 @@ export async function registrarDesdeAgente(
 
   const actividad = [
     datos.mensaje_entrante && { tipo: 'mensaje_entrante', contenido: datos.mensaje_entrante },
+    datos.mensaje_persona && {
+      tipo: 'mensaje_persona',
+      contenido: datos.mensaje_persona,
+      autor: datos.autor_persona ?? 'Equipo',
+    },
     datos.mensaje_agente && {
       tipo: 'mensaje_agente',
       contenido: datos.mensaje_agente,
@@ -193,4 +207,21 @@ export async function registrarDesdeAgente(
       .insert(actividad.map((a) => ({ ...a, organizacion_id: org.id, lead_id: leadId })))
   }
   return { ok: true, lead_id: leadId, etapa }
+}
+
+/**
+ * Para una respuesta manual desde Chatwoot: ¿qué número de WhatsApp usa esa
+ * bandeja? Así n8n no necesita saber qué cliente es cada bandeja.
+ */
+export async function canalPorBandeja(
+  bandejaId: number,
+): Promise<{ phone_number_id: string } | null> {
+  const { data } = await supabaseAdmin()
+    .from('organizaciones')
+    .select('wa_phone_number_id, estado_plan')
+    .eq('chatwoot_bandeja_id', bandejaId)
+    .maybeSingle()
+  const fila = data as { wa_phone_number_id: string | null; estado_plan: string } | null
+  if (!fila?.wa_phone_number_id || fila.estado_plan === 'suspendido') return null
+  return { phone_number_id: fila.wa_phone_number_id }
 }

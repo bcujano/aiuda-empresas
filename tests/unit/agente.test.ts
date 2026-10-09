@@ -73,3 +73,17 @@ describe('secreto', () => {
     expect(secretoValido(null, s)).toBe(false)
   })
 })
+
+describe('respuestas manuales desde Chatwoot', () => {
+  it('acepta el mensaje de una persona y la bandeja como número', async () => {
+    const { esquemaCanal } = await import('@/server/agente-reglas')
+    expect(esquemaCanal.parse({ chatwoot_bandeja_id: '6' }).chatwoot_bandeja_id).toBe(6)
+    const r = esquemaLead.parse({
+      phone_number_id: '1',
+      telefono: '+593991234567',
+      mensaje_persona: 'Hola, le escribe Juan de Fagal',
+      autor_persona: 'Juan',
+    })
+    expect(r.mensaje_persona).toContain('Juan')
+  })
+})

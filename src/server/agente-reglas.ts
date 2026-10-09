@@ -58,7 +58,13 @@ export const esquemaLead = organizacion.extend({
   referral: esquemaReferral.optional(),
   mensaje_entrante: z.string().max(4000).optional(),
   mensaje_agente: z.string().max(4000).optional(),
+  // Respuesta escrita a mano por una persona del equipo desde Chatwoot.
+  mensaje_persona: z.string().max(4000).optional(),
+  autor_persona: z.string().trim().max(120).optional(),
 })
+
+/** Bandeja de Chatwoot de la que salió una respuesta manual. */
+export const esquemaCanal = z.object({ chatwoot_bandeja_id: z.coerce.number().int().positive() })
 
 export type DatosLeadAgente = z.infer<typeof esquemaLead>
 
