@@ -1,6 +1,7 @@
 # Perfil de WhatsApp Business · Fagal Abogados
 
 - **Número:** +593 99 258 0707 (WABA de Aiuda)
+- **Phone Number ID:** 1417299348129209 · **WABA ID:** 28998833426402954
 - **Nombre visible:** Fagal Abogados
 - **Categoría:** Servicios legales
 - **Foto:** logo de Fagal (cuadrado, 640 × 640, fondo sólido, sin texto pequeño)
