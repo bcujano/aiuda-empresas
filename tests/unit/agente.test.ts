@@ -78,6 +78,8 @@ describe('respuestas manuales desde Chatwoot', () => {
   it('acepta el mensaje de una persona y la bandeja como número', async () => {
     const { esquemaCanal } = await import('@/server/agente-reglas')
     expect(esquemaCanal.parse({ chatwoot_bandeja_id: '6' }).chatwoot_bandeja_id).toBe(6)
+    expect(esquemaCanal.parse({ chatwoot_cuenta_id: 4 }).chatwoot_cuenta_id).toBe(4)
+    expect(esquemaCanal.safeParse({}).success).toBe(false)
     const r = esquemaLead.parse({
       phone_number_id: '1',
       telefono: '+593991234567',

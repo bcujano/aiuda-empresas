@@ -1,13 +1,13 @@
 import { NextResponse } from 'next/server'
 import { env } from '@/lib/env'
-import { canalPorBandeja, contextoAgente, registrarDesdeAgente } from '@/server/agente'
+import { canalPorChatwoot, contextoAgente, registrarDesdeAgente } from '@/server/agente'
 import { esquemaCanal, esquemaContexto, esquemaLead, secretoValido } from '@/server/agente-reglas'
 
 /**
  * API del agente de n8n. Cabecera obligatoria `x-agente-secreto`.
  *   POST /api/agente/contexto → organización, servicios, conocimiento, lead y ángulo detectado
  *   POST /api/agente/lead     → crea o actualiza el lead y registra la actividad
- *   POST /api/agente/canal    → número de WhatsApp de una bandeja de Chatwoot (respuestas manuales)
+ *   POST /api/agente/canal    → número de WhatsApp del cliente de una cuenta de Chatwoot
  * Los errores van como códigos en MAYÚSCULAS para que el workflow los distinga.
  */
 export async function POST(peticion: Request, { params }: { params: Promise<{ accion: string }> }) {
@@ -39,11 +39,8 @@ export async function POST(peticion: Request, { params }: { params: Promise<{ ac
   if (accion === 'canal') {
     const analisis = esquemaCanal.safeParse(cuerpo)
     if (!analisis.success) return invalido(analisis.error.issues)
-    const canal = await canalPorBandeja(
-      analisis.data.chatwoot_bandeja_id,
-      analisis.data.chatwoot_conversacion_id,
-    )
-    if (!canal) return NextResponse.json({ error: 'BANDEJA_DESCONOCIDA' }, { status: 404 })
+    const canal = await canalPorChatwoot(analisis.data)
+    if (!canal) return NextResponse.json({ error: 'CANAL_DESCONOCIDO' }, { status: 404 })
     return NextResponse.json(canal)
   }
 

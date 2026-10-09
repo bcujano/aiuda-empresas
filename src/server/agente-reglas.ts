@@ -66,10 +66,13 @@ export const esquemaLead = organizacion.extend({
 })
 
 /** Bandeja de Chatwoot de la que salió una respuesta manual. */
-export const esquemaCanal = z.object({
-  chatwoot_bandeja_id: z.coerce.number().int().positive(),
-  chatwoot_conversacion_id: z.coerce.number().int().positive().optional(),
-})
+export const esquemaCanal = z
+  .object({
+    chatwoot_cuenta_id: z.coerce.number().int().positive().optional(),
+    chatwoot_bandeja_id: z.coerce.number().int().positive().optional(),
+    chatwoot_conversacion_id: z.coerce.number().int().positive().optional(),
+  })
+  .refine((d) => d.chatwoot_cuenta_id || d.chatwoot_bandeja_id, 'Falta la cuenta o la bandeja')
 
 export type DatosLeadAgente = z.infer<typeof esquemaLead>
 

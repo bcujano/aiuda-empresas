@@ -222,30 +222,32 @@ export async function registrarDesdeAgente(
 }
 
 /**
- * Para una respuesta manual desde Chatwoot: ¿qué número de WhatsApp usa esa
- * bandeja y a qué teléfono va esa conversación? Así n8n no necesita saber qué
- * cliente es cada bandeja.
+ * Canal de un mensaje que llega por Chatwoot: qué número de WhatsApp tiene ese
+ * cliente y a qué teléfono va esa conversación. Cada cliente tiene su propia
+ * cuenta de Chatwoot, así que la cuenta basta para saber quién es; la bandeja
+ * se acepta como alternativa.
  */
-export async function canalPorBandeja(
-  bandejaId: number,
-  conversacionId?: number,
-): Promise<{ phone_number_id: string; telefono: string | null } | null> {
+export async function canalPorChatwoot(entrada: {
+  chatwoot_cuenta_id?: number
+  chatwoot_bandeja_id?: number
+  chatwoot_conversacion_id?: number
+}): Promise<{ phone_number_id: string; telefono: string | null } | null> {
   const db = supabaseAdmin()
-  const { data } = await db
-    .from('organizaciones')
-    .select('id, wa_phone_number_id, estado_plan')
-    .eq('chatwoot_bandeja_id', bandejaId)
-    .maybeSingle()
+  let consulta = db.from('organizaciones').select('id, wa_phone_number_id, estado_plan')
+  consulta = entrada.chatwoot_cuenta_id
+    ? consulta.eq('chatwoot_cuenta_id', entrada.chatwoot_cuenta_id)
+    : consulta.eq('chatwoot_bandeja_id', entrada.chatwoot_bandeja_id ?? 0)
+  const { data } = await consulta.maybeSingle()
   const org = data as { id: string; wa_phone_number_id: string | null; estado_plan: string } | null
   if (!org?.wa_phone_number_id || org.estado_plan === 'suspendido') return null
 
   let telefono: string | null = null
-  if (conversacionId) {
+  if (entrada.chatwoot_conversacion_id) {
     const { data: lead } = await db
       .from('leads')
       .select('telefono')
       .eq('organizacion_id', org.id)
-      .eq('chatwoot_conversacion_id', conversacionId)
+      .eq('chatwoot_conversacion_id', entrada.chatwoot_conversacion_id)
       .maybeSingle()
     telefono = (lead as { telefono: string } | null)?.telefono ?? null
   }
