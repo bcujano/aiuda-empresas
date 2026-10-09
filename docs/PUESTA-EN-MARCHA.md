@@ -14,22 +14,17 @@ Falta conectar Supabase y Vercel (Byron) y construir la fase 2 (wizard y agente)
 | Landings públicas `/<cliente>` y `/<cliente>/<ángulo>`, con píxel y referencia `FAG-TRI` | `src/app/[slug]/**`, `src/components/landing/**` |
 | Vista previa sin base (solo desarrollo) | `/vista-previa/tributario` |
 
-## Reparto (Byron, 2026-10-10: «yo solo cambio el nombre del repo, el resto lo haces tú»)
+## Puesta en marcha manual (Byron no pudo cargar tokens en el entorno, 2026-10-10)
+1. Supabase (proyecto ya creado) → SQL Editor → pegar `supabase/instalar-todo.sql` completo → Run.
+   Probado en Postgres local: crea las tablas, Fagal y sus 3 ángulos; la semilla se puede repetir.
+2. Authentication → Users → Add user (correo + contraseña, «Auto Confirm User») y luego:
+   `insert into usuarios (auth_user_id, nombre_completo, rol) select id, 'Byron Cujano', 'superadmin' from auth.users where email = 'brncjn@gmail.com';`
+3. Vercel → Add New → Project → importar `bcujano/aiuda-empresas` → 5 variables de `.env.example`
+   (llaves en Supabase → Project Settings → API) → Deploy.
+4. Pasar a Claude la URL de Vercel: Claude verifica landing y login.
 
-**Byron (solo lo que exige su login):**
-1. Renombrar el repo en GitHub a `aiuda-empresas`.
-2. Crear la cuenta de Supabase de Aiuda y la cuenta/equipo de Vercel, y dejar dos tokens como
-   variables del entorno de la sesión (nunca en el chat): `SUPABASE_ACCESS_TOKEN` (Account →
-   Access Tokens) y `VERCEL_TOKEN` (Account Settings → Tokens). Vercel debe tener la app de
-   GitHub instalada sobre el repo.
-3. En n8n, dos credenciales con su propio login: la de WhatsApp del número de Fagal (token del
-   usuario del sistema) y la de Gemini (clave de Google AI Studio). Pasar por chat solo el
-   Phone Number ID y el WABA ID (no son secretos).
-
-**Claude (con esos tokens):** crea el proyecto `aiuda-empresas` en Supabase (São Paulo), aplica
-migraciones y semilla, crea el superadmin de Byron por invitación al correo (él pone su
-contraseña), crea el proyecto `aiuda-empresas` en Vercel con sus variables y despliega, arma el
-workflow de n8n, prueba de punta a punta y deja todo documentado aquí.
+`supabase/instalar-todo.sql` se regenera concatenando migraciones + semilla; si se agrega una
+migración, se pega solo el archivo nuevo, nunca el paquete completo otra vez.
 
 ## Siguiente (fase 2)
 - Hecho: `/api/agente/contexto` y `/api/agente/lead` (`src/server/agente*.ts`).
