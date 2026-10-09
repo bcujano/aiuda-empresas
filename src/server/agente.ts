@@ -1,6 +1,9 @@
+import { etiquetaHora } from '@/lib/agenda'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { ventanaAbierta } from '@/lib/whatsapp'
-import type { Angulo, Lead, Organizacion } from '@/types/database'
+import type { Angulo, Lead } from '@/types/database'
+import { citaVigente } from './agenda'
+import { leadPorTelefono, organizacionPorNumero } from './agente-base'
 import { historialDelLead, type LineaHistorial } from './agente-historial'
 import {
   type DatosLeadAgente,
@@ -15,17 +18,6 @@ import {
  * el agente nunca elige la organización.
  */
 
-async function organizacionPorNumero(phoneNumberId: string): Promise<Organizacion | null> {
-  const { data } = await supabaseAdmin()
-    .from('organizaciones')
-    .select('*')
-    .eq('wa_phone_number_id', phoneNumberId)
-    .maybeSingle()
-  const org = data as Organizacion | null
-  // Un cliente suspendido no tiene agente.
-  return org && org.estado_plan !== 'suspendido' ? org : null
-}
-
 async function angulosActivos(orgId: string): Promise<Angulo[]> {
   const { data } = await supabaseAdmin()
     .from('angulos')
@@ -34,16 +26,6 @@ async function angulosActivos(orgId: string): Promise<Angulo[]> {
     .eq('activo', true)
     .order('orden', { ascending: true })
   return (data ?? []) as Angulo[]
-}
-
-async function leadPorTelefono(orgId: string, telefono: string): Promise<Lead | null> {
-  const { data } = await supabaseAdmin()
-    .from('leads')
-    .select('*')
-    .eq('organizacion_id', orgId)
-    .eq('telefono', telefono)
-    .maybeSingle()
-  return (data as Lead | null) ?? null
 }
 
 export type Contexto = {
@@ -68,6 +50,8 @@ export type Contexto = {
   historial: LineaHistorial[]
   /** true si la persona pasó el tope de mensajes del día: el agente no responde. */
   tope_alcanzado: boolean
+  /** Reunión vigente del lead (reservada o confirmada por el equipo). */
+  cita_vigente: { etiqueta: string; modalidad: string; estado: string } | null
   /** Dónde se copia la conversación para el equipo humano (null si no tiene Chatwoot). */
   canal: { chatwoot_cuenta_id: number; chatwoot_bandeja_id: number } | null
 }
@@ -86,9 +70,9 @@ export async function contextoAgente(entrada: {
     leadPorTelefono(org.id, entrada.telefono),
     db.from('conocimiento').select('datos').eq('organizacion_id', org.id).maybeSingle(),
   ])
-  const memoria = lead
-    ? await historialDelLead(org.id, lead.id)
-    : { historial: [], mensajes_hoy: 0 }
+  const [memoria, cita] = lead
+    ? await Promise.all([historialDelLead(org.id, lead.id), citaVigente(org.id, lead.id)])
+    : [{ historial: [], mensajes_hoy: 0 }, null]
   const detectado = resolverAngulo(angulos, org.codigo, entrada) ?? lead?.angulo_id ?? null
   const angulo = angulos.find((a) => a.id === detectado)
 
@@ -124,6 +108,9 @@ export async function contextoAgente(entrada: {
     ventana_abierta: lead ? ventanaAbierta(lead.ultimo_inbound_at, lead.ventana_horas) : true,
     historial: memoria.historial,
     tope_alcanzado: memoria.mensajes_hoy >= TOPE_MENSAJES_DIA,
+    cita_vigente: cita
+      ? { etiqueta: etiquetaHora(cita.inicia_at), modalidad: cita.modalidad, estado: cita.estado }
+      : null,
     canal:
       org.chatwoot_cuenta_id && org.chatwoot_bandeja_id
         ? {

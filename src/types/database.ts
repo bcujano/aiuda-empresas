@@ -22,6 +22,14 @@ export type Organizacion = {
   chatwoot_cuenta_id: number | null
   chatwoot_bandeja_id: number | null
   pixel_id: string | null
+  cita_minutos: number
+  cita_intervalo_minutos: number
+  cita_anticipacion_horas: number
+  cita_dias_adelante: number
+  modalidades: ('virtual' | 'presencial')[]
+  direccion: string | null
+  aviso_email: string | null
+  aviso_whatsapp: string | null
   created_at: string
   updated_at: string
 }
@@ -119,6 +127,12 @@ export type Cita = {
   google_event_id: string | null
   enlace_reunion: string | null
   notas: string | null
+  token: string
+  origen: 'agente' | 'equipo'
+  confirmada_at: string | null
+  aviso_equipo_at: string | null
+  recordatorio_24h_at: string | null
+  recordatorio_2h_at: string | null
 }
 
 export type TipoActividad =

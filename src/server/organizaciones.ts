@@ -48,6 +48,7 @@ const RUTAS_RESERVADAS = new Set([
   'login',
   'api',
   'vista-previa',
+  'cita',
   '_next',
   'privacidad',
   'eliminacion-de-datos',
