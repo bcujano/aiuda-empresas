@@ -14,22 +14,25 @@ Falta conectar Supabase y Vercel (Byron) y construir la fase 2 (wizard y agente)
 | Landings públicas `/<cliente>` y `/<cliente>/<ángulo>`, con píxel y referencia `FAG-TRI` | `src/app/[slug]/**`, `src/components/landing/**` |
 | Vista previa sin base (solo desarrollo) | `/vista-previa/tributario` |
 
-## Pasos de Byron
-1. **Supabase (cuenta nueva de Aiuda)** → proyecto `aiuda-setter`, región São Paulo.
-   - SQL Editor: pegar en orden `0001`, `0002`, `0003` y luego `supabase/semillas/fagal.sql`.
-   - Authentication → Users → *Add user* con tu correo y contraseña. Luego en el SQL Editor:
-     ```sql
-     insert into usuarios (auth_user_id, nombre_completo, rol)
-     select id, 'Byron Cujano', 'superadmin' from auth.users where email = 'TU_CORREO';
-     ```
-   - Pasar a Vercel: Project URL, `anon` key y `service_role` key.
-2. **Vercel** → importar el repo, nombre del proyecto **`aiuda-empresas`**
-   (queda en `https://aiuda-empresas.vercel.app`; landing de Fagal: `/fagal/tributario`).
-   Variables: las de `.env.example`. `AGENTE_SECRETO`: una cadena larga al azar.
-3. **WhatsApp de Fagal: +593 99 258 0707** (ya en la semilla: la landing queda publicada al
-   pegarla). Falta pasar Phone Number ID, WABA ID y token del usuario del sistema para el agente.
+## Reparto (Byron, 2026-10-10: «yo solo cambio el nombre del repo, el resto lo haces tú»)
+
+**Byron (solo lo que exige su login):**
+1. Renombrar el repo en GitHub a `aiuda-setter`.
+2. Crear la cuenta de Supabase de Aiuda y la cuenta/equipo de Vercel, y dejar dos tokens como
+   variables del entorno de la sesión (nunca en el chat): `SUPABASE_ACCESS_TOKEN` (Account →
+   Access Tokens) y `VERCEL_TOKEN` (Account Settings → Tokens). Vercel debe tener la app de
+   GitHub instalada sobre el repo.
+3. En n8n, dos credenciales con su propio login: la de WhatsApp del número de Fagal (token del
+   usuario del sistema) y la de Gemini (clave de Google AI Studio). Pasar por chat solo el
+   Phone Number ID y el WABA ID (no son secretos).
+
+**Claude (con esos tokens):** crea el proyecto `aiuda-setter` en Supabase (São Paulo), aplica
+migraciones y semilla, crea el superadmin de Byron por invitación al correo (él pone su
+contraseña), crea el proyecto `aiuda-empresas` en Vercel con sus variables y despliega, arma el
+workflow de n8n, prueba de punta a punta y deja todo documentado aquí.
 
 ## Siguiente (fase 2)
+- Hecho: `/api/agente/contexto` y `/api/agente/lead` (`src/server/agente*.ts`).
 - Wizard de conocimiento para el admin del cliente.
 - `/api/agente/*` (contexto por `phone_number_id`, registrar lead, calificar, horarios, agendar).
 - Workflow n8n «Aiuda Setter · Agente» (Gemini + OpenAI de respaldo) y cuenta de Chatwoot de Fagal.
