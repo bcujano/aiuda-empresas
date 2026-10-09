@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   esquemaContexto,
   esquemaLead,
+  inicioDelDiaQuito,
   origenDeEntrada,
   resolverAngulo,
   secretoValido,
@@ -11,6 +12,18 @@ const ANGULOS = [
   { id: 'a-tri', codigo: 'TRI', meta_ad_ids: ['120001'] },
   { id: 'a-lab', codigo: 'LAB', meta_ad_ids: [] },
 ]
+
+describe('inicioDelDiaQuito', () => {
+  it('es la medianoche de Quito expresada en UTC', () => {
+    expect(inicioDelDiaQuito(new Date('2026-10-09T15:00:00Z')).toISOString()).toBe(
+      '2026-10-09T05:00:00.000Z',
+    )
+    // 02:00 UTC del 10 todavía es el 9 en Quito.
+    expect(inicioDelDiaQuito(new Date('2026-10-10T02:00:00Z')).toISOString()).toBe(
+      '2026-10-09T05:00:00.000Z',
+    )
+  })
+})
 
 describe('ángulo del lead', () => {
   it('manda el anuncio sobre la referencia del texto', () => {

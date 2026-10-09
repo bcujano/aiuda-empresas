@@ -1,7 +1,13 @@
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { ventanaAbierta } from '@/lib/whatsapp'
 import type { Angulo, Lead, Organizacion } from '@/types/database'
-import { type DatosLeadAgente, origenDeEntrada, resolverAngulo } from './agente-reglas'
+import { historialDelLead, type LineaHistorial } from './agente-historial'
+import {
+  type DatosLeadAgente,
+  origenDeEntrada,
+  resolverAngulo,
+  TOPE_MENSAJES_DIA,
+} from './agente-reglas'
 
 /**
  * Lo que el agente de n8n lee y escribe en el CRM. Todo se ancla a la
@@ -58,6 +64,10 @@ export type Contexto = {
     | 'chatwoot_conversacion_id'
   > | null
   ventana_abierta: boolean
+  /** Conversación previa guardada en el CRM, de la más antigua a la más reciente. */
+  historial: LineaHistorial[]
+  /** true si la persona pasó el tope de mensajes del día: el agente no responde. */
+  tope_alcanzado: boolean
   /** Dónde se copia la conversación para el equipo humano (null si no tiene Chatwoot). */
   canal: { chatwoot_cuenta_id: number; chatwoot_bandeja_id: number } | null
 }
@@ -76,6 +86,9 @@ export async function contextoAgente(entrada: {
     leadPorTelefono(org.id, entrada.telefono),
     db.from('conocimiento').select('datos').eq('organizacion_id', org.id).maybeSingle(),
   ])
+  const memoria = lead
+    ? await historialDelLead(org.id, lead.id)
+    : { historial: [], mensajes_hoy: 0 }
   const detectado = resolverAngulo(angulos, org.codigo, entrada) ?? lead?.angulo_id ?? null
   const angulo = angulos.find((a) => a.id === detectado)
 
@@ -109,6 +122,8 @@ export async function contextoAgente(entrada: {
       : null,
     // Si escribe ahora, la ventana está abierta; si no hay lead aún, también.
     ventana_abierta: lead ? ventanaAbierta(lead.ultimo_inbound_at, lead.ventana_horas) : true,
+    historial: memoria.historial,
+    tope_alcanzado: memoria.mensajes_hoy >= TOPE_MENSAJES_DIA,
     canal:
       org.chatwoot_cuenta_id && org.chatwoot_bandeja_id
         ? {

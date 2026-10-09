@@ -108,6 +108,17 @@ export function origenDeEntrada(pistas: { texto?: string; referral?: object }): 
   return { origen: 'whatsapp_directo', ventana_horas: 24 }
 }
 
+/** Medianoche de hoy en Quito (UTC-5 fijo, sin horario de verano). */
+export function inicioDelDiaQuito(ahora: Date): Date {
+  const quito = new Date(ahora.getTime() - 5 * 3600_000)
+  return new Date(
+    Date.UTC(quito.getUTCFullYear(), quito.getUTCMonth(), quito.getUTCDate(), 5, 0, 0),
+  )
+}
+
+/** Mensajes al día por persona a partir de los cuales el agente deja de responder. */
+export const TOPE_MENSAJES_DIA = 40
+
 /** Comparación en tiempo constante del secreto de n8n. */
 export function secretoValido(recibido: string | null, esperado: string): boolean {
   if (!recibido || recibido.length !== esperado.length) return false
