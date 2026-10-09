@@ -1,0 +1,181 @@
+@import "tailwindcss";
+
+@theme {
+  /* Aiuda Setter: barra lateral tinta, un solo acento. */
+  --color-lateral: #111827;
+  --color-lateral-alto: #1f2937;
+
+  --color-primario: #1f3a5f;
+  --color-primario-claro: #2b4f7e;
+  --color-acento: #d97706;
+
+  --color-fondo: #f6f7f9;
+  --color-superficie: #ffffff;
+  --color-borde: #e4e7ec;
+  --color-texto: #101828;
+  --color-texto-suave: #5d6b82;
+
+  --color-exito: #1e7a46;
+  --color-exito-suave: #e6f4ec;
+  --color-peligro: #b3261e;
+  --color-peligro-suave: #fbeae8;
+  --color-aviso: #8a6100;
+  --color-aviso-suave: #fdf3da;
+}
+
+/* Alias en :root para poder usarlos como var() dentro de arbitrary values. */
+:root {
+  --lateral: var(--color-lateral);
+  --primario: var(--color-primario);
+  --acento: var(--color-acento);
+  --fondo: var(--color-fondo);
+  --superficie: var(--color-superficie);
+  --borde: var(--color-borde);
+  --texto: var(--color-texto);
+  --texto-suave: var(--color-texto-suave);
+  --exito: var(--color-exito);
+  --exito-suave: var(--color-exito-suave);
+  --peligro: var(--color-peligro);
+  --peligro-suave: var(--color-peligro-suave);
+  --aviso: var(--color-aviso);
+  --aviso-suave: var(--color-aviso-suave);
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+body {
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+  background: var(--fondo);
+  color: var(--texto);
+}
+
+/*
+ * El cajón de móvil se abre con la variable --cajon, que pone el componente.
+ * Se usa una variable en vez de un estilo en línea para que la regla de
+ * escritorio pueda ganar sin recurrir a !important: en pantalla grande la
+ * barra está siempre fija, pase lo que pase con el estado del cajón.
+ */
+.barra-lateral {
+  translate: var(--cajon, -100%);
+  transition: translate 0.2s ease;
+}
+
+@media (min-width: 1024px) {
+  .barra-lateral {
+    translate: 0;
+  }
+}
+
+/* Quien pidió menos movimiento no recibe la animación del cajón. */
+@media (prefers-reduced-motion: reduce) {
+  .barra-lateral,
+  .tarjeta-arrastrable {
+    transition: none;
+  }
+}
+
+/* La barra lateral hace scroll pero sin barra visible. */
+.nav-lateral {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.nav-lateral::-webkit-scrollbar {
+  display: none;
+}
+
+@utility tarjeta {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+}
+
+@utility campo {
+  width: 100%;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.875rem;
+  color: var(--texto);
+}
+
+.campo:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 1px;
+}
+
+@utility boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 8px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.boton:disabled {
+  opacity: 0.6;
+}
+
+@utility boton-primario {
+  background: var(--primario);
+  color: #fff;
+}
+.boton-primario:hover:not(:disabled) {
+  background: var(--color-primario-claro);
+}
+
+@utility boton-suave {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  color: var(--texto);
+}
+.boton-suave:hover:not(:disabled) {
+  background: var(--fondo);
+}
+
+@utility boton-peligro {
+  background: var(--peligro);
+  color: #fff;
+}
+
+/* El foco siempre visible: WCAG 2.2 AA. */
+a:focus-visible,
+button:focus-visible,
+select:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 2px;
+}
+
+/* En móvil, todo lo que se toca mide al menos 44px. */
+@media (max-width: 640px) {
+  input,
+  select,
+  button {
+    min-height: 44px;
+  }
+}
+
+.columna-pipeline {
+  min-height: 60vh;
+}
+
+.tarjeta-arrastrable {
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.15s ease;
+}
+.tarjeta-arrastrable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgb(0 0 0 / 0.08);
+}
