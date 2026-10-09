@@ -39,7 +39,10 @@ export async function POST(peticion: Request, { params }: { params: Promise<{ ac
   if (accion === 'canal') {
     const analisis = esquemaCanal.safeParse(cuerpo)
     if (!analisis.success) return invalido(analisis.error.issues)
-    const canal = await canalPorBandeja(analisis.data.chatwoot_bandeja_id)
+    const canal = await canalPorBandeja(
+      analisis.data.chatwoot_bandeja_id,
+      analisis.data.chatwoot_conversacion_id,
+    )
     if (!canal) return NextResponse.json({ error: 'BANDEJA_DESCONOCIDA' }, { status: 404 })
     return NextResponse.json(canal)
   }

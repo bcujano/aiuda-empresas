@@ -66,7 +66,10 @@ export const esquemaLead = organizacion.extend({
 })
 
 /** Bandeja de Chatwoot de la que salió una respuesta manual. */
-export const esquemaCanal = z.object({ chatwoot_bandeja_id: z.coerce.number().int().positive() })
+export const esquemaCanal = z.object({
+  chatwoot_bandeja_id: z.coerce.number().int().positive(),
+  chatwoot_conversacion_id: z.coerce.number().int().positive().optional(),
+})
 
 export type DatosLeadAgente = z.infer<typeof esquemaLead>
 

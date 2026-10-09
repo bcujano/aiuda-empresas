@@ -223,17 +223,31 @@ export async function registrarDesdeAgente(
 
 /**
  * Para una respuesta manual desde Chatwoot: ¿qué número de WhatsApp usa esa
- * bandeja? Así n8n no necesita saber qué cliente es cada bandeja.
+ * bandeja y a qué teléfono va esa conversación? Así n8n no necesita saber qué
+ * cliente es cada bandeja.
  */
 export async function canalPorBandeja(
   bandejaId: number,
-): Promise<{ phone_number_id: string } | null> {
-  const { data } = await supabaseAdmin()
+  conversacionId?: number,
+): Promise<{ phone_number_id: string; telefono: string | null } | null> {
+  const db = supabaseAdmin()
+  const { data } = await db
     .from('organizaciones')
-    .select('wa_phone_number_id, estado_plan')
+    .select('id, wa_phone_number_id, estado_plan')
     .eq('chatwoot_bandeja_id', bandejaId)
     .maybeSingle()
-  const fila = data as { wa_phone_number_id: string | null; estado_plan: string } | null
-  if (!fila?.wa_phone_number_id || fila.estado_plan === 'suspendido') return null
-  return { phone_number_id: fila.wa_phone_number_id }
+  const org = data as { id: string; wa_phone_number_id: string | null; estado_plan: string } | null
+  if (!org?.wa_phone_number_id || org.estado_plan === 'suspendido') return null
+
+  let telefono: string | null = null
+  if (conversacionId) {
+    const { data: lead } = await db
+      .from('leads')
+      .select('telefono')
+      .eq('organizacion_id', org.id)
+      .eq('chatwoot_conversacion_id', conversacionId)
+      .maybeSingle()
+    telefono = (lead as { telefono: string } | null)?.telefono ?? null
+  }
+  return { phone_number_id: org.wa_phone_number_id, telefono }
 }
