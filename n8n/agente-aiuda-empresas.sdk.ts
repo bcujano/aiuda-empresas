@@ -1,4 +1,4 @@
-import { workflow, node, trigger, languageModel, memory, ifElse, expr } from '@n8n/workflow-sdk';
+import { workflow, node, trigger, languageModel, ifElse, expr } from '@n8n/workflow-sdk';
 
 const CRM = 'https://aiuda-empresas.vercel.app';
 const CW = 'https://chatwoot-production-8564.up.railway.app/api/v1/accounts';
@@ -46,14 +46,14 @@ const clasificar = node({
         "if (!texto || !telefono || !b.account?.id || !conv.id) return [];\n" +
         "return [{ json: {\n" +
         "  tipo: entrante ? 'cliente' : 'persona',\n" +
-        "  cuenta: b.account.id, conversacion_id: conv.id,\n" +
+        "  cuenta: b.account.id, conversacion_id: conv.id, mensaje_id: b.id,\n" +
         "  contacto_id: conv.meta?.sender?.id ?? (entrante ? remitente.id : null) ?? null,\n" +
         "  etiquetas: conv.labels ?? [], telefono, texto,\n" +
         "  nombre_perfil: entrante ? nombre : '', remitente: nombre,\n" +
         "} }];",
     },
   },
-  output: [{ tipo: 'cliente', cuenta: 4, conversacion_id: 10, contacto_id: 1, etiquetas: [], telefono: '593991234567', texto: 'Hola', nombre_perfil: 'Ana', remitente: 'Ana' }],
+  output: [{ tipo: 'cliente', cuenta: 4, conversacion_id: 10, mensaje_id: 500, contacto_id: 1, etiquetas: [], telefono: '593991234567', texto: 'Hola', nombre_perfil: 'Ana', remitente: 'Ana' }],
 });
 
 const canal = node({
@@ -89,6 +89,58 @@ const quien = ifElse({
       },
     },
   },
+});
+
+const esperar = node({
+  type: 'n8n-nodes-base.wait',
+  version: 1.1,
+  config: { name: 'Esperar mensajes seguidos (7 s)', parameters: { resume: 'timeInterval', amount: 7, unit: 'seconds' } },
+  output: [{}],
+});
+
+const leerMensajes = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: últimos mensajes',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'GET',
+      url: expr(`${CW}/{{ $('Clasificar mensaje').first().json.cuenta }}/conversations/{{ $('Clasificar mensaje').first().json.conversacion_id }}/messages`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+    },
+    credentials: credCw,
+  },
+  output: [{ payload: [{ id: 500, message_type: 0, private: false, content: 'Hola', attachments: [] }] }],
+});
+
+const juntar = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Juntar mensajes seguidos',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode:
+        "// Si la persona mandó varios mensajes seguidos, responde solo la última ejecución y con todos juntos.\n" +
+        "const m = $('Clasificar mensaje').first().json;\n" +
+        "const lista = ($input.first().json.payload ?? []).filter((x) => !x.private && (x.message_type === 0 || x.message_type === 1));\n" +
+        "if (!lista.length) return [{ json: { texto: m.texto } }];\n" +
+        "if (lista.some((x) => x.message_type === 0 && x.id > m.mensaje_id)) return [];\n" +
+        "const textos = [];\n" +
+        "for (let i = lista.length - 1; i >= 0; i--) {\n" +
+        "  const x = lista[i];\n" +
+        "  if (x.message_type === 1) break;\n" +
+        "  if (x.id > m.mensaje_id) continue;\n" +
+        "  const adj = x.attachments ?? [];\n" +
+        "  const t = String(x.content ?? '').trim() || (adj.some((a) => a.file_type === 'audio') ? '[Envió una nota de voz]' : adj.length ? '[Envió un archivo o imagen]' : '');\n" +
+        "  if (t) textos.unshift(t);\n" +
+        "}\n" +
+        "return [{ json: { texto: (textos.join('\\n') || m.texto).slice(0, 4000) } }];",
+    },
+  },
+  output: [{ texto: 'Hola' }],
 });
 
 const leerEtiquetas = node({
@@ -135,12 +187,26 @@ const contexto = node({
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Clasificar mensaje').first().json.texto }) }}"),
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Juntar mensajes seguidos').first().json.texto }) }}"),
       options: { timeout: 15000 },
     },
     credentials: credCrm,
   },
-  output: [{ organizacion: { nombre: 'Fagal Abogados', especialista: 'un abogado', codigo: 'FAG' }, servicios: [], conocimiento: {}, angulo_detectado: null, lead: null, ventana_abierta: true }],
+  output: [{ organizacion: { nombre: 'Fagal Abogados', especialista: 'un abogado', codigo: 'FAG' }, servicios: [], conocimiento: {}, angulo_detectado: null, lead: null, ventana_abierta: true, historial: [], tope_alcanzado: false }],
+});
+
+const dentroTope = ifElse({
+  version: 2.2,
+  config: {
+    name: '¿Dentro del tope diario?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr('{{ $json.tope_alcanzado === true }}'), operator: { type: 'boolean', operation: 'false', singleValue: true } }],
+        combinator: 'and',
+      },
+    },
+  },
 });
 
 const gemini = languageModel({
@@ -163,15 +229,6 @@ const openai = languageModel({
   },
 });
 
-const memoria = memory({
-  type: '@n8n/n8n-nodes-langchain.memoryBufferWindow',
-  version: 1.4,
-  config: {
-    name: 'Memoria de la conversación',
-    parameters: { sessionIdType: 'customKey', sessionKey: expr("{{ $('Canal del CRM').first().json.phone_number_id + ':' + $('Clasificar mensaje').first().json.telefono }}"), contextWindowLength: 20 },
-  },
-});
-
 const agente = node({
   type: '@n8n/n8n-nodes-langchain.agent',
   version: 3.1,
@@ -179,7 +236,7 @@ const agente = node({
     name: 'Agente Aiuda Empresas',
     parameters: {
       promptType: 'define',
-      text: expr("{{ $('Clasificar mensaje').first().json.texto }}"),
+      text: expr("{{ $('Juntar mensajes seguidos').first().json.texto }}"),
       needsFallback: true,
       options: {
         maxIterations: 3,
@@ -189,6 +246,7 @@ const agente = node({
           "INFORMACIÓN DEL CLIENTE CARGADA POR EL EQUIPO: {{ JSON.stringify($('Contexto del CRM').first().json.conocimiento) }}\n" +
           "SERVICIO POR EL QUE LLEGÓ (código): {{ $('Contexto del CRM').first().json.angulo_detectado ?? 'desconocido' }}\n" +
           "LO QUE YA SABEMOS DE ESTA PERSONA: {{ JSON.stringify($('Contexto del CRM').first().json.lead) }}\n" +
+          "CONVERSACIÓN ANTERIOR (de la más antigua a la más reciente; 'equipo' es una persona del estudio): {{ JSON.stringify($('Contexto del CRM').first().json.historial ?? []) }}\n" +
           "Nombre de perfil de WhatsApp: {{ $('Clasificar mensaje').first().json.nombre_perfil }}\n" +
           "Fecha y hora en Quito: {{ $now.setZone('America/Guayaquil').toFormat('cccc d LLLL yyyy, HH:mm', { locale: 'es' }) }}\n\n" +
           'OBJETIVO: entender en pocas preguntas qué necesita la empresa y, si encaja, dejar lista la reunión.\n\n' +
@@ -207,7 +265,7 @@ const agente = node({
         ),
       },
     },
-    subnodes: { model: [gemini, openai], memory: memoria },
+    subnodes: { model: [gemini, openai] },
   },
   output: [{ output: '{"respuesta":"Hola, ¿me ayuda con su nombre y el de su empresa?","datos":{}}' }],
 });
@@ -220,7 +278,8 @@ const leerRespuesta = node({
     parameters: {
       mode: 'runOnceForAllItems',
       jsCode:
-        "const m = $('Clasificar mensaje').first().json;\n" +
+        "const m = { ...$('Clasificar mensaje').first().json, texto: $('Juntar mensajes seguidos').first().json.texto };\n" +
+        "const previa = $('Contexto del CRM').first().json.lead?.etapa ?? 'nuevo';\n" +
         "const pnid = $('Canal del CRM').first().json.phone_number_id;\n" +
         "const crudo = String($input.first().json.output ?? '').replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '').trim();\n" +
         "let respuesta = crudo; let datos = {};\n" +
@@ -236,10 +295,13 @@ const leerRespuesta = node({
         "const cuerpo_crm = { phone_number_id: pnid, telefono: m.telefono, texto: m.texto, mensaje_entrante: m.texto, mensaje_agente: respuesta, chatwoot_conversacion_id: m.conversacion_id, ...limpio };\n" +
         "if (m.contacto_id) cuerpo_crm.chatwoot_contacto_id = m.contacto_id;\n" +
         "if (!limpio.nombre && m.nombre_perfil) cuerpo_crm.nombre = String(m.nombre_perfil).slice(0, 120);\n" +
-        "return [{ json: { respuesta, cuenta: m.cuenta, conversacion_id: m.conversacion_id, cuerpo_crm } }];",
+        "const avisar = limpio.etapa === 'calificado' && previa === 'nuevo';\n" +
+        "const d = { ...($('Contexto del CRM').first().json.lead ?? {}), ...limpio };\n" +
+        "const nota = ['Lead calificado por el agente. Falta confirmar la reunión.', 'Nombre: ' + (d.nombre ?? cuerpo_crm.nombre ?? '—'), 'Empresa: ' + (d.empresa ?? '—'), 'Cargo: ' + (d.cargo ?? '—'), 'Colaboradores: ' + (d.colaboradores ?? '—'), 'Ciudad: ' + (d.ciudad ?? '—'), 'Necesidad: ' + (d.necesidad ?? '—'), 'Urgencia: ' + (d.urgencia ?? '—')].join('\\n');\n" +
+        "return [{ json: { respuesta, cuenta: m.cuenta, conversacion_id: m.conversacion_id, cuerpo_crm, avisar, nota } }];",
     },
   },
-  output: [{ respuesta: 'Hola', cuenta: 4, conversacion_id: 10, cuerpo_crm: {} }],
+  output: [{ respuesta: 'Hola', cuenta: 4, conversacion_id: 10, cuerpo_crm: {}, avisar: false, nota: '' }],
 });
 
 const publicarRespuesta = node({
@@ -299,7 +361,7 @@ const guardarEntrante = node({
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Clasificar mensaje').first().json.texto, mensaje_entrante: $('Clasificar mensaje').first().json.texto, chatwoot_conversacion_id: $('Clasificar mensaje').first().json.conversacion_id }) }}"),
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Juntar mensajes seguidos').first().json.texto, mensaje_entrante: $('Juntar mensajes seguidos').first().json.texto, chatwoot_conversacion_id: $('Clasificar mensaje').first().json.conversacion_id }) }}"),
     },
     credentials: credCrm,
   },
@@ -348,15 +410,73 @@ const registrarPersona = node({
   output: [{ ok: true }],
 });
 
+const hayAviso = ifElse({
+  version: 2.2,
+  config: {
+    name: '¿Quedó calificado ahora?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr("{{ $('Leer respuesta del agente').first().json.avisar }}"), operator: { type: 'boolean', operation: 'true', singleValue: true } }],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const notaCalificado = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: nota privada del lead calificado',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $('Leer respuesta del agente').first().json.cuenta }}/conversations/{{ $('Leer respuesta del agente').first().json.conversacion_id }}/messages`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ content: $('Leer respuesta del agente').first().json.nota + ($('Guardar lead en el CRM').first().json.lead_id ? '\\nFicha: https://aiuda-empresas.vercel.app/panel/leads/' + $('Guardar lead en el CRM').first().json.lead_id : ''), message_type: 'outgoing', private: true }) }}"),
+    },
+    credentials: credCw,
+  },
+  output: [{ id: 102 }],
+});
+
+const etiquetaCalificado = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: etiqueta calificado',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $('Leer respuesta del agente').first().json.cuenta }}/conversations/{{ $('Leer respuesta del agente').first().json.conversacion_id }}/labels`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ labels: [...new Set([...($('Chatwoot: leer etiquetas').first().json.payload || []), 'calificado'])] }) }}"),
+    },
+    credentials: credCw,
+  },
+  output: [{ payload: ['calificado'] }],
+});
+
 export default workflow('aiuda-empresas-agente', 'Aiuda Empresas · Agente WhatsApp')
   .add(desdeChatwoot)
   .to(clasificar)
   .to(canal)
   .to(quien
-    .onTrue(leerEtiquetas.to(sinPersona.onTrue(contexto).onFalse(guardarEntrante)))
+    .onTrue(esperar.to(leerMensajes).to(juntar).to(leerEtiquetas).to(sinPersona.onTrue(contexto).onFalse(guardarEntrante)))
     .onFalse(etiquetaHumano.to(registrarPersona)))
   .add(contexto)
-  .to(agente)
+  .to(dentroTope.onTrue(agente).onFalse(guardarEntrante))
+  .add(agente)
   .to(leerRespuesta)
   .to(publicarRespuesta)
-  .to(guardarCrm);
+  .to(guardarCrm)
+  .to(hayAviso.onTrue(notaCalificado.to(etiquetaCalificado)));
