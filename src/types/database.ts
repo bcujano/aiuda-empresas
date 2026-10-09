@@ -133,6 +133,7 @@ export type Cita = {
   aviso_equipo_at: string | null
   recordatorio_24h_at: string | null
   recordatorio_2h_at: string | null
+  created_at: string
 }
 
 export type TipoActividad =

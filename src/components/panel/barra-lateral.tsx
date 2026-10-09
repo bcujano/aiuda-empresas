@@ -8,6 +8,7 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  Settings,
   X,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -23,8 +24,9 @@ type Enlace = { href: string; texto: string; icono: typeof KanbanSquare; area?: 
 const ENLACES: Enlace[] = [
   { href: '/panel', texto: 'Resumen', icono: LayoutDashboard },
   { href: '/panel/pipeline', texto: 'Pipeline', icono: KanbanSquare, area: 'leads' },
-  { href: '/panel/citas', texto: 'Citas', icono: CalendarDays, area: 'citas' },
+  { href: '/panel/citas', texto: 'Agenda', icono: CalendarDays, area: 'citas' },
   { href: '/panel/angulos', texto: 'Ángulos', icono: Megaphone, area: 'angulos' },
+  { href: '/panel/configuracion', texto: 'Configuración', icono: Settings, area: 'conocimiento' },
 ]
 
 export type DatosBarra = {
