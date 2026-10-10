@@ -30,8 +30,26 @@ export type Organizacion = {
   direccion: string | null
   aviso_email: string | null
   aviso_whatsapp: string | null
+  plan_codigo: string
+  precio_acordado: number | null
+  meta_ad_account_id: string | null
+  meta_page_id: string | null
+  meta_ig_id: string | null
+  drive_carpeta_id: string | null
   created_at: string
   updated_at: string
+}
+
+export type Plan = {
+  codigo: string
+  nombre: string
+  precio_mensual: number
+  mas_iva: boolean
+  descripcion: string
+  modulos: string[]
+  limites: Record<string, unknown>
+  orden: number
+  activo: boolean
 }
 
 export type Usuario = {
