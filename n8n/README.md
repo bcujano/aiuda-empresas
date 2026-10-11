@@ -1,6 +1,6 @@
 # n8n · Agente de WhatsApp
 
-- Workflow: **Aiuda Empresas · Agente WhatsApp** (`5RutxNOf3IlhrvEk`), activo. Versión 4.1 (agenda).
+- Workflow: **Aiuda Empresas · Agente WhatsApp** (`5RutxNOf3IlhrvEk`), activo. Versión 4.2 (agenda, notas de voz e imágenes con Gemini, «escribiendo…»).
   Archivadas: v3 (`2GNz6M8oB5a06wuH`), v2 (`EOaQbhAVaTex3XDI`) y v1 (`hyleQMHMu34muR8Q`).
   Fuente: `agente-aiuda-empresas.sdk.ts` (SDK de n8n). Se cambia por MCP, nunca reimportando.
 

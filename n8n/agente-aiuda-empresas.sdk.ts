@@ -4,6 +4,8 @@ const CRM = 'https://aiuda-empresas.vercel.app';
 const CW = 'https://chatwoot-production-8564.up.railway.app/api/v1/accounts';
 const credCrm = { httpHeaderAuth: { id: 'UDLkIFYmIOTGYKKj', name: 'CRM Aiuda Empresas' } };
 const credCw = { httpHeaderAuth: { id: 'JUdPITdOVffodNzC', name: 'Chatwoot Fagal API' } };
+const credWa = { httpHeaderAuth: { id: '8BXtTKC3qbdMCDoM', name: 'Meta WhatsApp Fagal' } };
+const credGemini = { googlePalmApi: { id: 'jbOxhXuz7QS5IefQ', name: 'Gemini Aiuda' } };
 
 /*
  * v3 · Esquema probado de Aiuda: Meta → bandeja «WhatsApp Cloud» de Chatwoot →
@@ -46,7 +48,7 @@ const clasificar = node({
         "if (!texto || !telefono || !b.account?.id || !conv.id) return [];\n" +
         "return [{ json: {\n" +
         "  tipo: entrante ? 'cliente' : 'persona',\n" +
-        "  cuenta: b.account.id, conversacion_id: conv.id, mensaje_id: b.id,\n" +
+        "  cuenta: b.account.id, conversacion_id: conv.id, mensaje_id: b.id, wamid: b.source_id ?? null,\n" +
         "  contacto_id: conv.meta?.sender?.id ?? (entrante ? remitente.id : null) ?? null,\n" +
         "  etiquetas: conv.labels ?? [], telefono, texto,\n" +
         "  nombre_perfil: entrante ? nombre : '', remitente: nombre,\n" +
@@ -126,9 +128,10 @@ const juntar = node({
         "// Si la persona mandó varios mensajes seguidos, responde solo la última ejecución y con todos juntos.\n" +
         "const m = $('Clasificar mensaje').first().json;\n" +
         "const lista = ($input.first().json.payload ?? []).filter((x) => !x.private && (x.message_type === 0 || x.message_type === 1));\n" +
-        "if (!lista.length) return [{ json: { texto: m.texto } }];\n" +
+        "if (!lista.length) return [{ json: { texto: m.texto, adjuntos: [] } }];\n" +
         "if (lista.some((x) => x.message_type === 0 && x.id > m.mensaje_id)) return [];\n" +
         "const textos = [];\n" +
+        "const adjuntos = [];\n" +
         "for (let i = lista.length - 1; i >= 0; i--) {\n" +
         "  const x = lista[i];\n" +
         "  if (x.message_type === 1) break;\n" +
@@ -136,8 +139,152 @@ const juntar = node({
         "  const adj = x.attachments ?? [];\n" +
         "  const t = String(x.content ?? '').trim() || (adj.some((a) => a.file_type === 'audio') ? '[Envió una nota de voz]' : adj.length ? '[Envió un archivo o imagen]' : '');\n" +
         "  if (t) textos.unshift(t);\n" +
+        "  for (const a of adj) if ((a.file_type === 'audio' || a.file_type === 'image') && a.data_url) adjuntos.unshift({ tipo: a.file_type, url: a.data_url, texto_original: String(x.content ?? '').trim() });\n" +
         "}\n" +
-        "return [{ json: { texto: (textos.join('\\n') || m.texto).slice(0, 4000) } }];",
+        "return [{ json: { texto: (textos.join('\\n') || m.texto).slice(0, 4000), adjuntos: adjuntos.slice(-3) } }];",
+    },
+  },
+  output: [{ texto: 'Hola', adjuntos: [] }],
+});
+
+const escribiendo = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'WhatsApp: escribiendo…',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr("https://graph.facebook.com/v22.0/{{ $('Canal del CRM').first().json.phone_number_id }}/messages"),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ messaging_product: 'whatsapp', status: 'read', message_id: $('Clasificar mensaje').first().json.wamid, typing_indicator: { type: 'text' } }) }}"),
+      options: { timeout: 5000 },
+    },
+    credentials: credWa,
+  },
+  output: [{ success: true }],
+});
+
+const tieneAdjuntos = ifElse({
+  version: 2.2,
+  config: {
+    name: '¿Trae audio o imagen?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr("{{ ($('Juntar mensajes seguidos').first().json.adjuntos ?? []).length > 0 }}"), operator: { type: 'boolean', operation: 'true', singleValue: true } }],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const separarAdjuntos = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Separar adjuntos',
+    parameters: { mode: 'runOnceForAllItems', jsCode: "return ($('Juntar mensajes seguidos').first().json.adjuntos ?? []).map((a) => ({ json: a }));" },
+  },
+  output: [{ tipo: 'audio', url: 'https://chatwoot/x.ogg', texto_original: '' }],
+});
+
+const descargarAdjunto = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: descargar adjunto',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'GET',
+      url: expr('{{ $json.url }}'),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      options: { response: { response: { responseFormat: 'file' } }, timeout: 30000 },
+    },
+    credentials: credCw,
+  },
+  output: [{}],
+});
+
+const prepararGemini = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Preparar audio o imagen para Gemini',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode:
+        "const salida = [];\n" +
+        "const originales = $('Separar adjuntos').all();\n" +
+        "for (const [i, item] of $input.all().entries()) {\n" +
+        "  const a = originales[i]?.json ?? {};\n" +
+        "  const bin = item.binary?.data;\n" +
+        "  if (!bin) { salida.push({ json: { tipo: a.tipo, sin_archivo: true } }); continue; }\n" +
+        "  const buf = await this.helpers.getBinaryDataBuffer(i, 'data');\n" +
+        "  const mime = String(bin.mimeType || (a.tipo === 'audio' ? 'audio/ogg' : 'image/jpeg')).split(';')[0];\n" +
+        "  const instruccion = a.tipo === 'audio'\n" +
+        "    ? 'Transcribe literalmente esta nota de voz en español. Devuelve solo la transcripción, sin comentarios.'\n" +
+        "    : 'Describe en una o dos frases qué muestra esta imagen y transcribe cualquier texto visible. Responde en español, sin comentarios.';\n" +
+        "  salida.push({ json: { tipo: a.tipo, texto_original: a.texto_original, cuerpo: { contents: [{ parts: [{ text: instruccion }, { inline_data: { mime_type: mime, data: buf.toString('base64') } }] }], generationConfig: { temperature: 0 } } } });\n" +
+        "}\n" +
+        "return salida;",
+    },
+  },
+  output: [{ tipo: 'audio', texto_original: '', cuerpo: {} }],
+});
+
+const gemini_medios = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Gemini: transcribir o describir',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent',
+      authentication: 'predefinedCredentialType',
+      nodeCredentialType: 'googlePalmApi',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr('{{ JSON.stringify($json.cuerpo ?? {}) }}'),
+      options: { timeout: 60000 },
+    },
+    credentials: credGemini,
+  },
+  output: [{ candidates: [{ content: { parts: [{ text: 'Hola, quisiera una reunión.' }] } }] }],
+});
+
+const textoFinal = node({
+  type: 'n8n-nodes-base.code',
+  version: 2,
+  config: {
+    name: 'Texto final',
+    parameters: {
+      mode: 'runOnceForAllItems',
+      jsCode:
+        "// Texto que lee el agente: lo escrito + la transcripción de notas de voz y la descripción de imágenes.\n" +
+        "const base = $('Juntar mensajes seguidos').first().json.texto;\n" +
+        "let agregados = [];\n" +
+        "try {\n" +
+        "  const entradas = $('Preparar audio o imagen para Gemini').all();\n" +
+        "  $input.all().forEach((item, i) => {\n" +
+        "    const tipo = entradas[i]?.json?.tipo;\n" +
+        "    const t = String(item.json?.candidates?.[0]?.content?.parts?.map((p) => p.text ?? '').join(' ') ?? '').trim();\n" +
+        "    if (!t) return;\n" +
+        "    agregados.push(tipo === 'audio' ? '[Nota de voz] ' + t : '[Imagen] ' + t);\n" +
+        "  });\n" +
+        "} catch (e) { agregados = []; }\n" +
+        "let texto = base;\n" +
+        "if (agregados.length) {\n" +
+        "  texto = base.split('\\n').filter((l) => l !== '[Envió una nota de voz]' && l !== '[Envió un archivo o imagen]').concat(agregados).join('\\n');\n" +
+        "}\n" +
+        "return [{ json: { texto: texto.slice(0, 4000) } }];",
     },
   },
   output: [{ texto: 'Hola' }],
@@ -187,7 +334,7 @@ const contexto = node({
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Juntar mensajes seguidos').first().json.texto }) }}"),
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Texto final').first().json.texto }) }}"),
       options: { timeout: 15000 },
     },
     credentials: credCrm,
@@ -278,7 +425,7 @@ const agente = node({
     name: 'Agente Aiuda Empresas',
     parameters: {
       promptType: 'define',
-      text: expr("{{ $('Juntar mensajes seguidos').first().json.texto }}"),
+      text: expr("{{ $('Texto final').first().json.texto }}"),
       needsFallback: true,
       options: {
         maxIterations: 5,
@@ -304,7 +451,7 @@ const agente = node({
           '8. AGENDA: nunca escribas una fecha u hora que no haya salido de la herramienta ver_horarios en este mismo turno. Cuando tengas empresa, cargo, colaboradores y la necesidad, y el tema encaje: marca etapa calificado, llama a ver_horarios y ofrece 3 opciones de días distintos con su etiqueta exacta, y pregunta si prefiere virtual o presencial (si es presencial, la dirección está en ver_horarios). Si pide un día u hora concreta, búscala en ver_horarios; si no está libre, dilo y ofrece las más cercanas.\n' +
           '9. Cuando la persona elija una opción y la modalidad, llama a agendar_cita con el inicia_at exacto. Si devuelve ok=true, confirma con la etiqueta exacta que devolvió y di que el equipo del estudio la confirmará por este mismo WhatsApp. Si devuelve ok=false, ofrece las horas que devolvió. Nunca digas que la reunión está agendada sin ok=true.\n' +
           '10. Si ya hay REUNIÓN VIGENTE y la persona quiere cambiarla, usa ver_horarios y agendar_cita (la reprograma). Si solo pregunta por ella, dile la etiqueta y si está por confirmar o confirmada.\n' +
-          '11. Si el mensaje dice [Envió una nota de voz] o [Envió un archivo o imagen], pide amablemente que lo escriba en texto.\n' +
+          '11. Las notas de voz llegan transcritas como [Nota de voz] y las imágenes descritas como [Imagen]: respóndelas con normalidad. Si dice [Envió una nota de voz] o [Envió un archivo o imagen] sin contenido, pide amablemente que lo escriba en texto.\n' +
           '12. Si la persona se queja o se confunde, discúlpate una sola vez, en una frase, y sigue con el siguiente paso.\n\n' +
           'FORMATO: tu respuesta final es SOLO un JSON válido, sin texto antes ni después y sin bloques de código:\n' +
           '{"respuesta":"mensaje para WhatsApp","datos":{"nombre":null,"empresa":null,"cargo":null,"colaboradores":null,"ciudad":null,"necesidad":null,"urgencia":null,"encaje":null,"etapa":null,"motivo_descarte":null}}\n' +
@@ -325,7 +472,7 @@ const leerRespuesta = node({
     parameters: {
       mode: 'runOnceForAllItems',
       jsCode:
-        "const m = { ...$('Clasificar mensaje').first().json, texto: $('Juntar mensajes seguidos').first().json.texto };\n" +
+        "const m = { ...$('Clasificar mensaje').first().json, texto: $('Texto final').first().json.texto };\n" +
         "const previa = $('Contexto del CRM').first().json.lead?.etapa ?? 'nuevo';\n" +
         "const pnid = $('Canal del CRM').first().json.phone_number_id;\n" +
         "const crudo = String($input.first().json.output ?? '').replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '').trim();\n" +
@@ -408,7 +555,7 @@ const guardarEntrante = node({
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Juntar mensajes seguidos').first().json.texto, mensaje_entrante: $('Juntar mensajes seguidos').first().json.texto, chatwoot_conversacion_id: $('Clasificar mensaje').first().json.conversacion_id }) }}"),
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, texto: $('Texto final').first().json.texto, mensaje_entrante: $('Texto final').first().json.texto, chatwoot_conversacion_id: $('Clasificar mensaje').first().json.conversacion_id }) }}"),
     },
     credentials: credCrm,
   },
@@ -518,8 +665,11 @@ export default workflow('aiuda-empresas-agente', 'Aiuda Empresas · Agente Whats
   .to(clasificar)
   .to(canal)
   .to(quien
-    .onTrue(esperar.to(leerMensajes).to(juntar).to(leerEtiquetas).to(sinPersona.onTrue(contexto).onFalse(guardarEntrante)))
+    .onTrue(esperar.to(leerMensajes).to(juntar).to(escribiendo).to(tieneAdjuntos.onTrue(separarAdjuntos.to(descargarAdjunto).to(prepararGemini).to(gemini_medios).to(textoFinal)).onFalse(textoFinal)))
     .onFalse(etiquetaHumano.to(registrarPersona)))
+  .add(textoFinal)
+  .to(leerEtiquetas)
+  .to(sinPersona.onTrue(contexto).onFalse(guardarEntrante))
   .add(contexto)
   .to(dentroTope.onTrue(agente).onFalse(guardarEntrante))
   .add(agente)
