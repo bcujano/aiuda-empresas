@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { elegirOrganizacion } from '@/app/panel/acciones'
+import { FormOrganizacion } from '@/components/panel/form-organizacion'
 import { FormNuevaOrganizacion } from '@/components/panel/formularios'
 import {
   CabeceraTarjeta,
@@ -15,6 +16,7 @@ import { fecha, hoyQuito } from '@/lib/formato'
 import { puede } from '@/lib/permisos'
 import { estadoEfectivo, PLAN_LEGIBLE } from '@/lib/planes'
 import { listarOrganizaciones } from '@/server/organizaciones'
+import { listarPlanesTodos } from '@/server/organizaciones-edicion'
 
 const TONO_PLAN = {
   prueba: 'neutro',
@@ -26,7 +28,7 @@ const TONO_PLAN = {
 export default async function Organizaciones() {
   const sesion = await verifyAuth()
   if (!sesion || !puede(sesion.usuario.rol, 'organizaciones')) redirect('/panel')
-  const organizaciones = await listarOrganizaciones()
+  const [organizaciones, planes] = await Promise.all([listarOrganizaciones(), listarPlanesTodos()])
   const hoy = hoyQuito()
 
   return (
@@ -85,6 +87,17 @@ export default async function Organizaciones() {
           </Tabla>
         )}
       </Tarjeta>
+
+      {organizaciones.map((o) => (
+        <Tarjeta key={o.id}>
+          <details>
+            <summary className="cursor-pointer px-4 py-3 font-semibold text-sm">
+              Editar {o.nombre}
+            </summary>
+            <FormOrganizacion org={o} planes={planes} />
+          </details>
+        </Tarjeta>
+      ))}
 
       <Tarjeta>
         <CabeceraTarjeta titulo="Nuevo cliente" />

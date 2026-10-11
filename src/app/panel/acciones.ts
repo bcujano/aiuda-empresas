@@ -11,6 +11,7 @@ import {
   esquemaNuevaOrganizacion,
   organizacionPorId,
 } from '@/server/organizaciones'
+import { esquemaOrganizacion, guardarOrganizacion } from '@/server/organizaciones-edicion'
 import { ETAPAS, type Etapa } from '@/types/database'
 
 export type Resultado = { error?: string; aviso?: string; ok?: boolean }
@@ -84,4 +85,20 @@ export async function agregarNotaAccion(_previo: Resultado, datos: FormData): Pr
   if (!resultado.ok) return { error: resultado.error }
   revalidatePath(`/panel/leads/${leadId}`)
   return { ok: true, aviso: 'Nota guardada.' }
+}
+
+export async function guardarOrganizacionAccion(
+  _previo: Resultado,
+  datos: FormData,
+): Promise<Resultado> {
+  const sesion = await verifyAuth()
+  if (!sesion || !puede(sesion.usuario.rol, 'organizaciones')) {
+    return { error: 'Solo el superadmin edita clientes.' }
+  }
+  const analisis = esquemaOrganizacion.safeParse(Object.fromEntries(datos.entries()))
+  if (!analisis.success) return { error: analisis.error.issues[0]?.message ?? 'Revisa los datos.' }
+  const r = await guardarOrganizacion(analisis.data)
+  if (!r.ok) return { error: r.error }
+  revalidatePath('/panel/organizaciones')
+  return { ok: true, aviso: 'Cliente guardado.' }
 }
