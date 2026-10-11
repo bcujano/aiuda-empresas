@@ -37,6 +37,7 @@ export type Organizacion = {
   meta_ig_id: string | null
   drive_carpeta_id: string | null
   wa_waba_id: string | null
+  prefijo_plantillas: string
   created_at: string
   updated_at: string
 }

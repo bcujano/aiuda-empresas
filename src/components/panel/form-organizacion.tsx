@@ -27,6 +27,7 @@ const GRUPOS: { titulo: string; campos: [keyof Organizacion, string][] }[] = [
       ['wa_waba_id', 'ID de la cuenta de WhatsApp (WABA)'],
       ['chatwoot_cuenta_id', 'Cuenta de Chatwoot'],
       ['chatwoot_bandeja_id', 'Bandeja de Chatwoot'],
+      ['prefijo_plantillas', 'Prefijo de plantillas (ej. fagal_)'],
     ],
   },
   {

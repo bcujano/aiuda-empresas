@@ -43,6 +43,12 @@ export const esquemaOrganizacion = z.object({
   meta_page_id: numeroId('El ID de la página son solo números'),
   meta_ig_id: numeroId('El ID de Instagram son solo números'),
   pixel_id: numeroId('El píxel son solo números'),
+  prefijo_plantillas: z.preprocess(
+    (v) => (typeof v === 'string' ? v.trim().toLowerCase() : ''),
+    z
+      .string()
+      .regex(/^([a-z0-9]+_)?$/, 'El prefijo va en minúsculas y termina en guion bajo (ej. fagal_)'),
+  ),
   drive_carpeta_id: opcional(/^[A-Za-z0-9_-]{10,80}$/, 'El ID de la carpeta de Drive no es válido'),
 })
 

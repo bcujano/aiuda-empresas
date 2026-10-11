@@ -1,6 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { CancelarSeguimiento, FormSecuencia } from '@/components/panel/form-secuencia'
+import {
+  CancelarSeguimiento,
+  CrearPlantillas,
+  FormSecuencia,
+} from '@/components/panel/form-secuencia'
 import {
   CabeceraTarjeta,
   Etiqueta,
@@ -12,6 +16,7 @@ import {
 } from '@/components/ui/primitivos'
 import { exigir } from '@/lib/auth'
 import { fechaHora } from '@/lib/formato'
+import { estadoPlantillas } from '@/server/plantillas'
 import { colaSeguimientos, listarSecuencias } from '@/server/seguimientos-panel'
 
 const ESTADO: Record<string, { texto: string; tono: 'aviso' | 'exito' | 'neutro' | 'peligro' }> = {
@@ -25,9 +30,10 @@ const ESTADO: Record<string, { texto: string; tono: 'aviso' | 'exito' | 'neutro'
 export default async function Seguimientos() {
   const sesion = await exigir('conocimiento')
   if (!sesion) redirect('/panel')
-  const [secuencias, cola] = await Promise.all([
+  const [secuencias, cola, plantillas] = await Promise.all([
     listarSecuencias(sesion.org.id),
     colaSeguimientos(sesion.org.id),
+    estadoPlantillas(sesion.org),
   ])
   return (
     <div className="flex flex-col gap-4">
@@ -45,6 +51,54 @@ export default async function Seguimientos() {
       ) : (
         secuencias.map((s) => <FormSecuencia key={s.id} secuencia={s} />)
       )}
+      <Tarjeta>
+        <CabeceraTarjeta
+          titulo="Plantillas de WhatsApp de este cliente"
+          extra={<CrearPlantillas />}
+        />
+        {plantillas.error ? (
+          <p className="px-4 pt-3 text-[var(--peligro)] text-sm">{plantillas.error}</p>
+        ) : null}
+        <Tabla>
+          <thead>
+            <tr>
+              <Th>Nombre en Meta</Th>
+              <Th>Para qué</Th>
+              <Th>Tipo</Th>
+              <Th>Estado</Th>
+            </tr>
+          </thead>
+          <tbody>
+            {plantillas.lista.map((p) => (
+              <tr key={p.nombre}>
+                <Td className="font-mono text-xs">{p.nombre}</Td>
+                <Td>{p.uso}</Td>
+                <Td>{p.categoria === 'UTILITY' ? 'Utilidad' : 'Marketing'}</Td>
+                <Td>
+                  <Etiqueta
+                    tono={
+                      p.estado === 'APPROVED'
+                        ? 'exito'
+                        : p.estado === 'No existe' || p.estado === 'REJECTED'
+                          ? 'peligro'
+                          : 'aviso'
+                    }
+                  >
+                    {p.estado === 'APPROVED'
+                      ? 'Aprobada'
+                      : p.estado === 'PENDING'
+                        ? 'En revisión'
+                        : p.estado === 'REJECTED'
+                          ? 'Rechazada'
+                          : p.estado}
+                  </Etiqueta>
+                </Td>
+              </tr>
+            ))}
+          </tbody>
+        </Tabla>
+      </Tarjeta>
+
       <Tarjeta>
         <CabeceraTarjeta titulo="Últimos 100 seguimientos" />
         {cola.length === 0 ? (

@@ -5,6 +5,7 @@ import { useActionState, useState } from 'react'
 import type { Resultado } from '@/app/panel/acciones'
 import {
   cancelarSeguimientoAccion,
+  crearPlantillasAccion,
   guardarSecuenciaAccion,
 } from '@/app/panel/seguimientos/acciones'
 import { Aviso, BotonAccion } from '@/components/ui/primitivos'
@@ -116,6 +117,16 @@ export function CancelarSeguimiento({ id }: { id: string }) {
       confirmacion="¿Cancelar este seguimiento?"
       onEjecutar={() => cancelarSeguimientoAccion(id)}
       texto="Cancelar"
+    />
+  )
+}
+
+export function CrearPlantillas() {
+  return (
+    <BotonAccion
+      onEjecutar={crearPlantillasAccion}
+      texto="Crear en Meta las que faltan"
+      variante="primario"
     />
   )
 }

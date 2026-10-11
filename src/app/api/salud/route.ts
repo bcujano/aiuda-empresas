@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { env } from '@/lib/env'
+import { saludMeta } from '@/server/meta'
 import { saludBase } from '@/server/salud'
 
 export const dynamic = 'force-dynamic'
@@ -23,7 +24,7 @@ export async function GET() {
   const proyecto = new URL(SUPABASE_URL).hostname.split('.')[0]
   const mismaBase = new URL(NEXT_PUBLIC_SUPABASE_URL).hostname === new URL(SUPABASE_URL).hostname
   try {
-    const base = await saludBase()
+    const [base, meta] = await Promise.all([saludBase(), saludMeta()])
     return NextResponse.json(
       {
         entorno: 'ok',
@@ -31,6 +32,7 @@ export async function GET() {
         misma_base_login_y_datos: mismaBase,
         llave_servidor: tipoDeLlave(SUPABASE_SERVICE_ROLE_KEY),
         base,
+        meta,
       },
       { status: base.ok ? 200 : 500 },
     )

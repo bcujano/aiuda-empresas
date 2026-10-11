@@ -156,7 +156,7 @@ export async function seguimientosPorEnviar(limite = 30) {
         canal: 'whatsapp',
         phone_number_id: org.wa_phone_number_id,
         to: lead.telefono.replace(/\D/g, ''),
-        plantilla: f.plantilla,
+        plantilla: `${org.prefijo_plantillas ?? ''}${f.plantilla}`,
         parametros: [v.nombre ?? 'estimado cliente', servicio, org.nombre],
         texto,
       })

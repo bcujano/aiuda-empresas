@@ -76,6 +76,7 @@ export function datosAviso(org: Organizacion, lead: Lead, cita: Cita) {
     organizacion: {
       nombre: org.nombre,
       wa_phone_number_id: org.wa_phone_number_id,
+      prefijo_plantillas: org.prefijo_plantillas ?? '',
       aviso_email: org.aviso_email,
       aviso_whatsapp: org.aviso_whatsapp,
       chatwoot_cuenta_id: org.chatwoot_cuenta_id,
