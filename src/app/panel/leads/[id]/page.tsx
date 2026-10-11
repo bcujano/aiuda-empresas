@@ -1,4 +1,5 @@
 import { notFound, redirect } from 'next/navigation'
+import { FormEditarLead } from '@/components/panel/form-lead'
 import { FormEtapa, FormNota } from '@/components/panel/formularios'
 import { CabeceraTarjeta, Etiqueta, Tarjeta, Vacio } from '@/components/ui/primitivos'
 import { exigir } from '@/lib/auth'
@@ -92,6 +93,15 @@ export default async function FichaLead({ params }: { params: Promise<{ id: stri
           </Tarjeta>
         </div>
       </div>
+
+      <Tarjeta>
+        <details>
+          <summary className="cursor-pointer px-4 py-3 font-semibold text-sm">
+            Editar datos o borrar el lead
+          </summary>
+          <FormEditarLead lead={lead} puedeBorrar={sesion.usuario.rol !== 'operador'} />
+        </details>
+      </Tarjeta>
 
       <Tarjeta>
         <CabeceraTarjeta titulo="Reuniones" />
