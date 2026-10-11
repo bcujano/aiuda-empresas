@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 import { COOKIE_ORG, exigir, verifyAuth } from '@/lib/auth'
 import { puede } from '@/lib/permisos'
+import { hayArchivo, subirImagen } from '@/server/archivos'
 import { agregarNota, cambiarEtapa } from '@/server/leads'
 import {
   crearOrganizacion,
@@ -94,6 +95,12 @@ export async function guardarOrganizacionAccion(
   const sesion = await verifyAuth()
   if (!sesion || !puede(sesion.usuario.rol, 'organizaciones')) {
     return { error: 'Solo el superadmin edita clientes.' }
+  }
+  const logo = datos.get('logo_archivo')
+  if (hayArchivo(logo)) {
+    const subida = await subirImagen(logo, 'logos')
+    if (!subida.ok) return { error: subida.error }
+    datos.set('logo_url', subida.url)
   }
   const analisis = esquemaOrganizacion.safeParse(Object.fromEntries(datos.entries()))
   if (!analisis.success) return { error: analisis.error.issues[0]?.message ?? 'Revisa los datos.' }

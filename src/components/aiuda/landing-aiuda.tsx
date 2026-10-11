@@ -12,22 +12,13 @@ import { FormLlamada, SalidaIntencion } from './llamada'
 import { Encabezado, Pie } from './marco'
 import { PlanesAiuda } from './planes-aiuda'
 import { FranjaClientes, PruebaSocial } from './prueba-social'
-import {
-  Comparacion,
-  Fundador,
-  Garantias,
-  Incluye,
-  Pasos,
-  Preguntas,
-  Problema,
-  Titulo,
-} from './secciones'
+import { Comparacion, Garantias, Incluye, Pasos, Preguntas, Problema, Titulo } from './secciones'
 
 /**
- * Landing de Aiuda Empresas, armada sobre lo que mejor convierte en servicios
+ * Landing de Aiuda Ads (servicio de Aiuda Empresas), armada sobre lo que mejor convierte en servicios
  * B2B: titular de resultado, demo del producto arriba, dato con fuente, pasos,
  * calculadora, comparación, prueba social real, planes con ancla, reversión de
- * riesgo, fundador, preguntas y doble salida (WhatsApp o «que me llamen»).
+ * riesgo, preguntas y doble salida (WhatsApp o «que me llamen»).
  */
 
 const titulo = Manrope({
@@ -42,13 +33,11 @@ export function LandingAiuda({
   enlace,
   pixelId,
   prueba,
-  fotoFundador,
 }: {
   planes: Plan[]
   enlace: string
   pixelId: string | null
   prueba: Datos
-  fotoFundador: string | null
 }) {
   const boton = (
     texto = 'Quiero más reuniones',
@@ -58,7 +47,7 @@ export function LandingAiuda({
     <BotonWhatsApp
       className={className}
       enlace={enlace}
-      referencia="AIU-WEB"
+      referencia="AIU-ADS"
       tamano={tamano}
       texto={texto}
     />
@@ -81,7 +70,7 @@ export function LandingAiuda({
             <div>
               <p className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1.5 font-medium text-sm ring-1 ring-[var(--linea)]">
                 <span className="size-2 rounded-full bg-[var(--esmeralda)]" />
-                Para empresas que venden a empresas · Ecuador
+                Para negocios que reciben clientes por WhatsApp · Ecuador
               </p>
               <h1 className="mt-6 font-extrabold text-[2.6rem] leading-[1.05] sm:text-6xl">
                 Sus anuncios traen mensajes.{' '}
@@ -235,8 +224,6 @@ export function LandingAiuda({
             <Garantias />
           </div>
         </section>
-
-        {seccion('fundador', <Fundador foto={fotoFundador} />)}
 
         {seccion(
           'preguntas',

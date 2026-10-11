@@ -33,7 +33,17 @@ export function FormTestimonio({ t }: { t?: FilaTestimonio }) {
         {campo('autor', 'Nombre de quien opina')}
         {campo('cargo', 'Cargo')}
         {campo('empresa', 'Empresa')}
-        {campo('foto_url', 'Foto (https, opcional)')}
+        <div className="flex flex-col gap-1 text-sm">
+          <label htmlFor={id('foto')}>Foto (opcional)</label>
+          <input
+            accept="image/png,image/jpeg,image/webp"
+            className="campo"
+            id={id('foto')}
+            name="foto_archivo"
+            type="file"
+          />
+          <input name="foto_url" type="hidden" value={t?.foto_url ?? ''} />
+        </div>
         {campo('calificacion', 'Estrellas (1 a 5, opcional)', 'number')}
         {campo('orden', 'Orden', 'number')}
       </div>

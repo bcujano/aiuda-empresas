@@ -16,7 +16,6 @@ const GRUPOS: { titulo: string; campos: [keyof Organizacion, string][] }[] = [
       ['especialista', 'Con quién se reúnen (ej. un abogado)'],
       ['ciudad', 'Ciudad'],
       ['color_primario', 'Color de marca'],
-      ['logo_url', 'Logo (https)'],
     ],
   },
   {
@@ -114,6 +113,24 @@ export function FormOrganizacion({ org, planes }: { org: Organizacion; planes: P
           ))}
         </fieldset>
       ))}
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        {org.logo_url ? (
+          // biome-ignore lint/performance/noImgElement: logo alojado en el almacenamiento.
+          <img
+            alt="Logo actual"
+            className="h-10 w-auto rounded border border-[var(--borde)]"
+            src={org.logo_url}
+          />
+        ) : null}
+        <label htmlFor={id('logo')}>Logo (PNG, JPG o WebP, hasta 2 MB)</label>
+        <input
+          accept="image/png,image/jpeg,image/webp"
+          id={id('logo')}
+          name="logo_archivo"
+          type="file"
+        />
+        <input name="logo_url" type="hidden" value={org.logo_url ?? ''} />
+      </div>
       <label className="flex items-center gap-2 text-sm">
         <input defaultChecked={org.caso_publico} name="caso_publico" type="checkbox" />
         Mostrar como cliente en la landing de Aiuda, con sus números en vivo (solo con su

@@ -2,7 +2,7 @@ import { MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import type { ReactNode } from 'react'
 
-/** Marco de la landing de Aiuda: barra superior fija, pie y botones de WhatsApp siempre a mano. */
+/** Marco de la landing de Aiuda Ads: barra superior fija, pie y botones de WhatsApp siempre a mano. */
 
 const ENLACES = [
   ['#como', 'Cómo funciona'],
@@ -20,7 +20,7 @@ export function Encabezado({ boton }: { boton: ReactNode }) {
           style={{ fontFamily: 'var(--font-titulo)' }}
         >
           aiuda<span className="text-[var(--esmeralda)]">.</span>
-          <span className="ml-1 font-semibold text-[var(--tinta-suave)] text-sm">empresas</span>
+          <span className="ml-1 font-semibold text-[var(--tinta-suave)] text-sm">ads</span>
         </span>
         <nav className="hidden items-center gap-7 text-[var(--tinta-suave)] text-sm lg:flex">
           {ENLACES.map(([h, t]) => (
@@ -43,7 +43,10 @@ export function Pie({ enlace, botonMovil }: { enlace: string; botonMovil: ReactN
     <>
       <footer className="border-[var(--linea)] border-t">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-8 text-[var(--tinta-suave)] text-sm sm:px-6">
-          <span>Aiuda Empresas · Quito, Ecuador · Datos tratados según la LOPDP</span>
+          <span>
+            Aiuda Ads · un servicio de Aiuda Empresas · Quito, Ecuador · Datos tratados según la
+            LOPDP
+          </span>
           <nav className="flex gap-5">
             <Link href="/privacidad">Privacidad</Link>
             <Link href="/eliminacion-de-datos">Eliminación de datos</Link>

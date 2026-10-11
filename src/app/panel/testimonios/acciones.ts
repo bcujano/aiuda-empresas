@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 import type { Resultado } from '@/app/panel/acciones'
 import { verifyAuth } from '@/lib/auth'
+import { hayArchivo, subirImagen } from '@/server/archivos'
 import { borrarTestimonio, esquemaTestimonio, guardarTestimonio } from '@/server/testimonios'
 
 async function esSuper() {
@@ -15,6 +16,12 @@ export async function guardarTestimonioAccion(
   datos: FormData,
 ): Promise<Resultado> {
   if (!(await esSuper())) return { error: 'Solo el superadmin edita reseñas.' }
+  const foto = datos.get('foto_archivo')
+  if (hayArchivo(foto)) {
+    const subida = await subirImagen(foto, 'resenas')
+    if (!subida.ok) return { error: subida.error }
+    datos.set('foto_url', subida.url)
+  }
   const analisis = esquemaTestimonio.safeParse({
     ...Object.fromEntries(datos.entries()),
     autorizado: datos.get('autorizado') === 'on',

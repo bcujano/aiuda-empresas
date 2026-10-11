@@ -52,6 +52,7 @@ const RUTAS_RESERVADAS = new Set([
   '_next',
   'privacidad',
   'eliminacion-de-datos',
+  'ads',
 ])
 
 export const esquemaNuevaOrganizacion = z.object({

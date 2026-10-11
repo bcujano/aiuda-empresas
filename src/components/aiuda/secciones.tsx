@@ -17,7 +17,6 @@ import {
   COMPARACION,
   DATOS_PROBLEMA,
   FUENTE_HBR,
-  FUNDADOR,
   GARANTIAS,
   INCLUYE,
   PASOS,
@@ -163,7 +162,7 @@ export function Comparacion() {
               <span className="sr-only">Característica</span>
             </th>
             <th className="bg-[var(--tinta)] p-4 font-bold text-white" scope="col">
-              Aiuda Empresas
+              Aiuda Ads
             </th>
             <th className="p-4 font-semibold" scope="col">
               Vendedor interno
@@ -206,36 +205,6 @@ export function Garantias() {
           <p className="mt-2 text-sm text-white/70 leading-relaxed">{g.texto}</p>
         </div>
       ))}
-    </div>
-  )
-}
-
-export function Fundador({ foto }: { foto: string | null }) {
-  return (
-    <div className="grid items-center gap-10 rounded-[2rem] bg-[var(--arena)] p-6 sm:p-10 md:grid-cols-[auto_1fr]">
-      {foto ? (
-        // biome-ignore lint/performance/noImgElement: foto alojada fuera, configurable por variable.
-        <img alt={FUNDADOR.nombre} className="size-40 rounded-3xl object-cover" src={foto} />
-      ) : (
-        <span className="flex size-40 items-center justify-center rounded-3xl bg-[var(--tinta)] font-bold text-5xl text-white">
-          {FUNDADOR.nombre
-            .split(' ')
-            .map((p) => p.charAt(0))
-            .join('')}
-        </span>
-      )}
-      <div>
-        <p className="font-semibold text-[var(--esmeralda)] text-sm uppercase tracking-wider">
-          Quién está detrás
-        </p>
-        <h2 className="mt-2 font-bold text-3xl">{FUNDADOR.nombre}</h2>
-        <p className="text-[var(--tinta-suave)]">{FUNDADOR.cargo} · Quito</p>
-        {FUNDADOR.texto.map((t) => (
-          <p className="mt-4 max-w-2xl leading-relaxed" key={t}>
-            {t}
-          </p>
-        ))}
-      </div>
     </div>
   )
 }

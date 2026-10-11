@@ -1,5 +1,6 @@
 /**
- * Textos de la landing de Aiuda Empresas (el producto propio, no un cliente).
+ * Textos de la landing de Aiuda Ads, el servicio de anuncios + asistente de
+ * WhatsApp de Aiuda Empresas (la marca madre).
  * Sin cifras ni testimonios inventados: los datos externos llevan su fuente y
  * los clientes y reseñas salen de la base (src/server/landing-aiuda.ts).
  */
@@ -89,17 +90,88 @@ export const DEMOS: Demo[] = [
     ],
     cita: 'Mañana 8:30 · videollamada',
   },
+  {
+    rubro: 'Inmobiliaria',
+    empresa: 'Inmobiliaria',
+    mensajes: [
+      { de: 'lead', texto: 'Hola, me interesa el departamento de 2 habitaciones del anuncio.' },
+      {
+        de: 'agente',
+        texto:
+          '¡Hola! Con gusto. ¿Lo busca para vivir o para invertir, y piensa pagarlo de contado o con crédito?',
+      },
+      { de: 'lead', texto: 'Para vivir, con crédito del BIESS.' },
+      {
+        de: 'agente',
+        texto:
+          'Perfecto. Un asesor le muestra el departamento el sábado a las 10:00 o el lunes a las 17:00. ¿Cuál le queda mejor?',
+      },
+      { de: 'lead', texto: 'El sábado.' },
+    ],
+    cita: 'Sábado 10:00 · visita al departamento',
+  },
+  {
+    rubro: 'Clínica dental',
+    empresa: 'Clínica dental',
+    mensajes: [
+      { de: 'lead', texto: 'Buenas noches, ¿cuánto cuesta un diseño de sonrisa?' },
+      {
+        de: 'agente',
+        texto:
+          'Hola, gracias por escribir. El valor depende de la valoración, que hace el odontólogo en la primera cita. ¿Le ayudo a reservarla?',
+      },
+      { de: 'lead', texto: 'Sí, ¿tienen algo esta semana?' },
+      {
+        de: 'agente',
+        texto: 'Tengo el miércoles a las 16:00 o el viernes a las 11:00. ¿Cuál prefiere?',
+      },
+      { de: 'lead', texto: 'Viernes 11:00.' },
+    ],
+    cita: 'Viernes 11:00 · valoración',
+  },
+  {
+    rubro: 'Clínica estética',
+    empresa: 'Clínica estética',
+    mensajes: [
+      { de: 'lead', texto: '📷 Foto' },
+      { de: 'lead', texto: 'Quiero tratar estas manchas, ¿qué me recomiendan?' },
+      {
+        de: 'agente',
+        texto:
+          'Gracias por la foto. El tratamiento lo define la especialista en una valoración sin costo. ¿Le reservo el jueves a las 15:00?',
+      },
+      { de: 'lead', texto: 'Perfecto, el jueves.' },
+    ],
+    cita: 'Jueves 15:00 · valoración',
+  },
+  {
+    rubro: 'Spa de uñas',
+    empresa: 'Spa de uñas',
+    mensajes: [
+      { de: 'lead', texto: 'Hola, ¿tienen turno para uñas acrílicas mañana?' },
+      {
+        de: 'agente',
+        texto: '¡Hola! Sí. Mañana tengo libre a las 10:30 y a las 16:00. ¿Cuál le reservo?',
+      },
+      { de: 'lead', texto: '16:00 porfa.' },
+      {
+        de: 'agente',
+        texto: 'Listo, su turno queda mañana a las 16:00. Le escribo un recordatorio antes. 💅',
+      },
+    ],
+    cita: 'Mañana 16:00 · uñas acrílicas',
+  },
 ]
 
 export const RUBROS = [
   'Estudios jurídicos',
   'Firmas contables',
   'Constructoras',
-  'Software B2B',
-  'Consultoras',
-  'Industria y distribución',
-  'Seguros',
-  'Salud ocupacional',
+  'Inmobiliarias',
+  'Clínicas dentales',
+  'Clínicas estéticas',
+  'Spas y centros de belleza',
+  'Software y servicios B2B',
 ]
 
 /** Datos de terceros, siempre con su fuente. */
@@ -267,13 +339,3 @@ export const PREGUNTAS = [
       'Cada empresa tiene su espacio aislado; nadie más ve sus datos. Tratamos la información según la Ley Orgánica de Protección de Datos Personales de Ecuador y usted puede pedir su eliminación.',
   },
 ]
-
-export const FUNDADOR = {
-  nombre: 'Byron Cujano',
-  cargo: 'Fundador de Aiuda',
-  texto: [
-    'Aiuda nació de un problema propio: pagábamos anuncios, llegaban mensajes y se enfriaban antes de que alguien respondiera.',
-    'Armamos el sistema primero para casa: Aiuda Academy atiende así a sus interesados, con un asistente de IA en WhatsApp y pauta en Meta medida por anuncio.',
-    'Hoy lo ponemos al servicio de empresas que venden a otras empresas, con la misma regla: cada número sale del sistema, nada se maquilla.',
-  ],
-}

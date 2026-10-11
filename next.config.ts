@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   // `next dev` reescribía CLAUDE.md con un bloque propio; las reglas de este repo se mantienen a mano.
   agentRules: false,
+  // Logos y fotos de reseñas se suben desde el panel (hasta 2 MB cada uno).
+  experimental: { serverActions: { bodySizeLimit: '3mb' } },
   headers: async () => [{ source: '/:ruta*', headers: CABECERAS_SEGURIDAD }],
 }
 
