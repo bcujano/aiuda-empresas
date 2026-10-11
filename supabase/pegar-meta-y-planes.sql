@@ -1,10 +1,7 @@
--- Pegar UNA vez en el SQL Editor de Supabase (aiuda-empresas): migración 0006 + datos de Meta de Fagal.
+-- Pegar en el SQL Editor de Supabase (aiuda-empresas). Se puede correr varias veces:
+-- solo crea lo que falta. Equivale a la migración 0006 + datos de Meta de Fagal.
 
--- Planes de suscripción de Aiuda y conexión de cada organización con Meta y Drive.
--- El token de Meta NO vive aquí: es uno solo de Aiuda (usuario del sistema del
--- Business Manager) y está en las variables de entorno. Aquí van solo los IDs.
-
-create table planes (
+create table if not exists planes (
   codigo text primary key check (codigo ~ '^[a-z0-9-]{2,30}$'),
   nombre text not null,
   precio_mensual numeric(10, 2) not null check (precio_mensual >= 0),
@@ -26,14 +23,13 @@ insert into planes (codigo, nombre, precio_mensual, descripcion, orden) values
 on conflict (codigo) do nothing;
 
 alter table organizaciones
-  add column plan_codigo text not null default 'basico' references planes(codigo),
-  add column precio_acordado numeric(10, 2),
-  add column meta_ad_account_id text check (meta_ad_account_id ~ '^[0-9]{6,20}$'),
-  add column meta_page_id text check (meta_page_id ~ '^[0-9]{6,20}$'),
-  add column meta_ig_id text check (meta_ig_id ~ '^[0-9]{6,20}$'),
-  add column drive_carpeta_id text;
+  add column if not exists plan_codigo text not null default 'basico' references planes(codigo),
+  add column if not exists precio_acordado numeric(10, 2),
+  add column if not exists meta_ad_account_id text check (meta_ad_account_id ~ '^[0-9]{6,20}$'),
+  add column if not exists meta_page_id text check (meta_page_id ~ '^[0-9]{6,20}$'),
+  add column if not exists meta_ig_id text check (meta_ig_id ~ '^[0-9]{6,20}$'),
+  add column if not exists drive_carpeta_id text;
 
--- Fagal: plan Básico ($200 + IVA) y su pauta desde la cuenta publicitaria y página de Aiuda.
 update organizaciones set
   plan_codigo = 'basico',
   precio_acordado = 200,
@@ -41,3 +37,7 @@ update organizaciones set
   meta_page_id = '835033990167463',
   meta_ig_id = '17841412271290888'
 where slug = 'fagal';
+
+-- Comprobación: debe mostrar la fila de Fagal con su plan y sus IDs.
+select slug, plan_codigo, precio_acordado, meta_ad_account_id, meta_page_id, meta_ig_id
+from organizaciones where slug = 'fagal';
