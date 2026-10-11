@@ -90,6 +90,13 @@ export const esquemaRecordatorio = z.object({
   tipo: z.enum(['24h', '2h']),
 })
 
+/** n8n avisa cómo le fue con un seguimiento. */
+export const esquemaSeguimiento = z.object({
+  id: z.string().uuid(),
+  ok: z.boolean(),
+  error: z.string().max(500).optional(),
+})
+
 export type DatosLeadAgente = z.infer<typeof esquemaLead>
 
 /**

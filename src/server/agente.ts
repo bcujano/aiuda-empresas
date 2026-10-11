@@ -11,6 +11,7 @@ import {
   resolverAngulo,
   TOPE_MENSAJES_DIA,
 } from './agente-reglas'
+import { despuesDeTurno } from './seguimientos'
 
 /**
  * Lo que el agente de n8n lee y escribe en el CRM. Todo se ancla a la
@@ -220,6 +221,14 @@ export async function registrarDesdeAgente(
       .from('actividad')
       .insert(actividad.map((a) => ({ ...a, organizacion_id: org.id, lead_id: leadId })))
   }
+  const vigente = etapa === 'calificado' ? await citaVigente(org.id, leadId) : null
+  await despuesDeTurno(org.id, leadId, {
+    entrante: datos.mensaje_entrante,
+    agente: datos.mensaje_agente,
+    persona: datos.mensaje_persona,
+    etapa,
+    tieneCita: Boolean(vigente),
+  })
   return { ok: true, lead_id: leadId, etapa }
 }
 

@@ -9,9 +9,11 @@ import {
   esquemaDisponibilidad,
   esquemaLead,
   esquemaRecordatorio,
+  esquemaSeguimiento,
   secretoValido,
 } from '@/server/agente-reglas'
 import { marcarRecordatorio, recordatoriosPendientes } from '@/server/recordatorios'
+import { marcarSeguimiento, seguimientosPorEnviar } from '@/server/seguimientos'
 
 /**
  * API del agente de n8n. Cabecera obligatoria `x-agente-secreto`.
@@ -22,6 +24,8 @@ import { marcarRecordatorio, recordatoriosPendientes } from '@/server/recordator
  *   POST /api/agente/agendar  → reserva (o reprograma) una hora libre y avisa al equipo
  *   POST /api/agente/recordatorios → recordatorios de reuniones por enviar
  *   POST /api/agente/recordatorio_enviado → marca un recordatorio como entregado
+ *   POST /api/agente/seguimientos → seguimientos por enviar ahora (ya decidido el canal)
+ *   POST /api/agente/seguimiento_resultado → marca un seguimiento como enviado o fallido
  * Los errores van como códigos en MAYÚSCULAS para que el workflow los distinga.
  */
 export async function POST(peticion: Request, { params }: { params: Promise<{ accion: string }> }) {
@@ -86,6 +90,17 @@ export async function POST(peticion: Request, { params }: { params: Promise<{ ac
     return NextResponse.json({
       ok: await marcarRecordatorio(analisis.data.cita_id, analisis.data.tipo),
     })
+  }
+
+  if (accion === 'seguimientos') {
+    return NextResponse.json({ seguimientos: await seguimientosPorEnviar() })
+  }
+
+  if (accion === 'seguimiento_resultado') {
+    const analisis = esquemaSeguimiento.safeParse(cuerpo)
+    if (!analisis.success) return invalido(analisis.error.issues)
+    const { id, ok, error } = analisis.data
+    return NextResponse.json({ ok: await marcarSeguimiento(id, ok, error) })
   }
 
   return NextResponse.json({ error: 'ACCION_DESCONOCIDA' }, { status: 404 })

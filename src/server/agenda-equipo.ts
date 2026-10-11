@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 import type { Cita, Lead, Organizacion } from '@/types/database'
 import { datosAviso } from './agenda'
 import { type EventoCita, enviarAviso } from './avisos'
+import { cancelarSeguimientos, programarSecuencia } from './seguimientos'
 
 /**
  * Lo que el equipo hace desde la agenda del CRM: mover, crear y cambiar el
@@ -127,6 +128,8 @@ export async function cambiarEstadoCita(
       .eq('id', c.lead.id)
       .eq('organizacion_id', orgId)
   }
+  if (estado === 'no_asistio') await programarSecuencia(orgId, c.lead.id, 'no_asistio')
+  if (estado === 'asistio') await cancelarSeguimientos(orgId, c.lead.id)
   if (estado === 'confirmada') await avisar('cita_confirmada', c.org, c.lead, cita)
   if (estado === 'cancelada') await avisar('cita_cancelada_equipo', c.org, c.lead, cita)
   return { ok: true }
@@ -179,6 +182,7 @@ export async function crearCitaEquipo(
     `${autor} agendó una reunión ${cita.modalidad}: ${etiquetaHora(cita.inicia_at)}.`,
     autor,
   )
+  await cancelarSeguimientos(orgId, l.id)
   await avisar('cita_confirmada', o, l, cita)
   return { ok: true }
 }

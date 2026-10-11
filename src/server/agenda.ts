@@ -4,6 +4,7 @@ import { ventanaAbierta } from '@/lib/whatsapp'
 import type { Cita, Lead, Organizacion } from '@/types/database'
 import { leadPorTelefono, organizacionPorNumero } from './agente-base'
 import { type EventoCita, enviarAviso, URL_APP } from './avisos'
+import { cancelarSeguimientos } from './seguimientos'
 
 /**
  * Agenda de cada organización. El agente solo puede ofrecer y reservar horas
@@ -162,6 +163,7 @@ export async function agendarDesdeAgente(entrada: {
     autor: 'Agente',
   })
 
+  await cancelarSeguimientos(org.id, lead.id)
   const evento: EventoCita = anterior ? 'cita_reprogramada_cliente' : 'cita_nueva'
   if (await enviarAviso(evento, datosAviso(org, { ...lead, ...cambios } as Lead, cita))) {
     await db.from('citas').update({ aviso_equipo_at: new Date().toISOString() }).eq('id', cita.id)

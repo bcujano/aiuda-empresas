@@ -8,6 +8,7 @@ import {
   LogOut,
   Megaphone,
   Menu,
+  MessageCircleReply,
   Settings,
   X,
 } from 'lucide-react'
@@ -25,6 +26,12 @@ const ENLACES: Enlace[] = [
   { href: '/panel', texto: 'Resumen', icono: LayoutDashboard },
   { href: '/panel/pipeline', texto: 'Pipeline', icono: KanbanSquare, area: 'leads' },
   { href: '/panel/citas', texto: 'Agenda', icono: CalendarDays, area: 'citas' },
+  {
+    href: '/panel/seguimientos',
+    texto: 'Seguimiento',
+    icono: MessageCircleReply,
+    area: 'conocimiento',
+  },
   { href: '/panel/angulos', texto: 'Ángulos', icono: Megaphone, area: 'angulos' },
   { href: '/panel/configuracion', texto: 'Configuración', icono: Settings, area: 'conocimiento' },
 ]

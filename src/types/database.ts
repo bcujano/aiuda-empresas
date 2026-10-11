@@ -36,6 +36,7 @@ export type Organizacion = {
   meta_page_id: string | null
   meta_ig_id: string | null
   drive_carpeta_id: string | null
+  wa_waba_id: string | null
   created_at: string
   updated_at: string
 }
@@ -128,6 +129,7 @@ export type Lead = {
   notas: string | null
   chatwoot_contacto_id: number | null
   chatwoot_conversacion_id: number | null
+  no_contactar: boolean
   created_at: string
   updated_at: string
 }
