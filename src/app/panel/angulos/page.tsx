@@ -1,4 +1,5 @@
 import { redirect } from 'next/navigation'
+import { FormAngulo } from '@/components/panel/form-angulo'
 import { CabeceraTarjeta, Etiqueta, Tarjeta, Vacio } from '@/components/ui/primitivos'
 import { exigir } from '@/lib/auth'
 import { referencia } from '@/lib/whatsapp'
@@ -64,9 +65,17 @@ export default async function Angulos() {
                 </ul>
               </div>
             </div>
+            <details className="border-[var(--borde)] border-t">
+              <summary className="cursor-pointer px-4 py-3 font-medium text-sm">Editar</summary>
+              <FormAngulo angulo={a} />
+            </details>
           </Tarjeta>
         ))
       )}
+      <Tarjeta>
+        <CabeceraTarjeta titulo="Nuevo ángulo" />
+        <FormAngulo angulo={null} />
+      </Tarjeta>
     </div>
   )
 }
