@@ -53,6 +53,16 @@
   - `cita_confirmada_cliente`: «Su reunión con {{1}} quedó confirmada: {{2}} ({{3}}). Si
     necesita cambiarla, responda a este mensaje.»
 
+## Seguimiento automático
+- Cada 10 min el mismo workflow de avisos (`dzUSrR0SDPPRqsCW`) pide `POST /api/agente/seguimientos`.
+  El CRM ya decide el canal: Chatwoot si la ventana gratis está abierta, plantilla si se cerró
+  (o nada: queda «sin ventana»). n8n entrega y avisa `POST /api/agente/seguimiento_resultado`.
+- Secuencias por cliente en el CRM (Seguimiento): `sin_respuesta`, `calificado_sin_cita`,
+  `no_asistio`. Se cancelan si la persona responde, agenda, es descartada o escribe «baja».
+- Plantilla de seguimiento (MARKETING, español) `seguimiento_lead`: «Hola {{1}}, ¿sigue
+  interesado en {{2}}? Puedo ofrecerle horarios para una reunión con {{3}}. Si no desea recibir
+  más mensajes, responda BAJA.»
+
 ## Pendiente
 - Credencial de Chatwoot por organización (hoy usa la de Fagal): al sumar el cliente #2.
 - Agenda real con Google Calendar (hoy pide horarios y el equipo confirma).
