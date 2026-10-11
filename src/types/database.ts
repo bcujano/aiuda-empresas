@@ -48,6 +48,7 @@ export type Plan = {
   mas_iva: boolean
   descripcion: string
   modulos: string[]
+  incluye: string[]
   limites: Record<string, unknown>
   orden: number
   activo: boolean
