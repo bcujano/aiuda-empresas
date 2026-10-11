@@ -10,6 +10,7 @@ import {
   Menu,
   MessageCircleReply,
   Settings,
+  UserCog,
   Users,
   X,
 } from 'lucide-react'
@@ -35,6 +36,7 @@ const ENLACES: Enlace[] = [
     area: 'conocimiento',
   },
   { href: '/panel/angulos', texto: 'Ángulos', icono: Megaphone, area: 'angulos' },
+  { href: '/panel/usuarios', texto: 'Usuarios', icono: UserCog, area: 'usuarios' },
   { href: '/panel/configuracion', texto: 'Configuración', icono: Settings, area: 'conocimiento' },
 ]
 
