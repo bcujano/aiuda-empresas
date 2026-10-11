@@ -138,6 +138,8 @@ export async function seguimientosPorEnviar(limite = 30) {
       servicio,
     }
     const texto = rellenar(f.texto, v)
+    // El historial y la memoria del agente deben ver lo que se envió, no la plantilla con {nombre}.
+    if (texto !== f.texto) await db.from('seguimientos').update({ texto }).eq('id', f.id)
     if (
       ventanaLibre(lead.ultimo_inbound_at, lead.ventana_horas, new Date()) &&
       org.chatwoot_cuenta_id &&

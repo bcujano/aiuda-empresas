@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularEspacios, etiquetaHora, repartir } from '@/lib/agenda'
+import { calcularEspacios, etiquetaHora, horaPedida, repartir } from '@/lib/agenda'
 
 const LUNES_A_VIERNES = [1, 2, 3, 4, 5].map((d) => ({
   dia_semana: d,
@@ -42,5 +42,28 @@ describe('repartir y etiquetaHora', () => {
 
   it('escribe la hora de Quito en español', () => {
     expect(etiquetaHora('2026-10-13T15:00:00Z')).toBe('martes 13 de octubre, 10:00')
+  })
+})
+
+describe('repartir a lo largo del día y horaPedida', () => {
+  const espacios = calcularEspacios(LUNES_A_VIERNES, [], REGLAS, new Date('2026-10-09T19:52:00Z'))
+
+  it('ofrece mañana, mediodía y tarde, no solo las primeras horas', () => {
+    const lunes = repartir(espacios, 3, 3).map((e) => etiquetaHora(e))
+    expect(lunes).toEqual([
+      'lunes 12 de octubre, 08:00',
+      'lunes 12 de octubre, 12:00',
+      'lunes 12 de octubre, 16:00',
+    ])
+  })
+
+  it('acepta el instante exacto y también la hora de Quito escrita con Z', () => {
+    expect(horaPedida('2026-10-14T15:00:00.000Z', espacios)?.toISOString()).toBe(
+      '2026-10-14T15:00:00.000Z',
+    )
+    expect(horaPedida('2026-10-14T10:00:00Z', espacios)?.toISOString()).toBe(
+      '2026-10-14T15:00:00.000Z',
+    )
+    expect(horaPedida('2026-10-14T03:00:00Z', espacios)).toBeNull()
   })
 })

@@ -68,6 +68,7 @@ export async function POST(peticion: Request, { params }: { params: Promise<{ ac
     const datos = await disponibilidadParaAgente(
       analisis.data.phone_number_id,
       analisis.data.telefono,
+      analisis.data.fecha,
     )
     if (!datos) return NextResponse.json({ error: 'ORGANIZACION_DESCONOCIDA' }, { status: 404 })
     return NextResponse.json(datos)

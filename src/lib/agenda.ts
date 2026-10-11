@@ -59,19 +59,50 @@ export function calcularEspacios(
   return salida.sort((a, b) => a.getTime() - b.getTime())
 }
 
-/** Pocos espacios repartidos: como máximo `porDia` por día y `total` en total. */
+/** Día de Quito (AAAA-MM-DD) de un instante. */
+export function diaQuito(e: Date): string {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: ZONA }).format(e)
+}
+
+/**
+ * Pocos espacios repartidos: como máximo `porDia` por día y `total` en total,
+ * esparcidos a lo largo del día (mañana, mediodía y tarde), no solo los primeros.
+ */
 export function repartir(espacios: Date[], porDia = 3, total = 12): Date[] {
-  const cuenta = new Map<string, number>()
-  const salida: Date[] = []
+  const porFecha = new Map<string, Date[]>()
   for (const e of espacios) {
-    const dia = new Intl.DateTimeFormat('en-CA', { timeZone: ZONA }).format(e)
-    const n = cuenta.get(dia) ?? 0
-    if (n >= porDia) continue
-    cuenta.set(dia, n + 1)
-    salida.push(e)
-    if (salida.length >= total) break
+    const dia = diaQuito(e)
+    porFecha.set(dia, [...(porFecha.get(dia) ?? []), e])
+  }
+  const salida: Date[] = []
+  for (const lista of porFecha.values()) {
+    const n = Math.min(porDia, lista.length)
+    const indices = new Set(
+      Array.from({ length: n }, (_, i) =>
+        n === 1 ? 0 : Math.round((i * (lista.length - 1)) / (n - 1)),
+      ),
+    )
+    for (const i of indices) {
+      const e = lista[i]
+      if (e && salida.length < total) salida.push(e)
+    }
   }
   return salida
+}
+
+/**
+ * La hora que pidió el agente. Si el instante exacto no está libre, se prueba
+ * leerlo como hora de Quito (los modelos a veces escriben «10:00Z» queriendo
+ * decir las 10:00 de aquí). Devuelve el instante libre o null.
+ */
+export function horaPedida(texto: string, libres: Date[]): Date | null {
+  const exacto = Date.parse(texto)
+  const local = Date.parse(`${texto.slice(0, 16)}:00-05:00`)
+  for (const t of [exacto, local]) {
+    const libre = libres.find((e) => e.getTime() === t)
+    if (libre) return libre
+  }
+  return null
 }
 
 /** «martes 14 de octubre, 10:00» en hora de Quito. */

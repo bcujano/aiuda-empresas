@@ -1,4 +1,4 @@
-import { calcularEspacios, etiquetaHora, repartir } from '@/lib/agenda'
+import { calcularEspacios, diaQuito, etiquetaHora, horaPedida, repartir } from '@/lib/agenda'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { ventanaAbierta } from '@/lib/whatsapp'
 import type { Cita, Lead, Organizacion } from '@/types/database'
@@ -56,12 +56,18 @@ export async function citaVigente(orgId: string, leadId: string): Promise<Cita |
 }
 
 /** Horas libres para que el agente las ofrezca (repartidas, con etiqueta legible). */
-export async function disponibilidadParaAgente(phoneNumberId: string, telefono: string) {
+export async function disponibilidadParaAgente(
+  phoneNumberId: string,
+  telefono: string,
+  fecha?: string,
+) {
   const org = await organizacionPorNumero(phoneNumberId)
   if (!org) return null
   const lead = await leadPorTelefono(org.id, telefono)
   const vigente = lead ? await citaVigente(org.id, lead.id) : null
-  const espacios = repartir(await espaciosLibres(org, vigente?.id))
+  const libres = await espaciosLibres(org, vigente?.id)
+  // Con fecha, todas las horas libres de ese día; sin fecha, unas pocas repartidas.
+  const espacios = fecha ? libres.filter((e) => diaQuito(e) === fecha) : repartir(libres)
   return {
     modalidades: org.modalidades,
     direccion: org.direccion,
@@ -125,12 +131,15 @@ export async function agendarDesdeAgente(entrada: {
 
   const anterior = await citaVigente(org.id, lead.id)
   const libres = await espaciosLibres(org, anterior?.id)
-  const pedido = Date.parse(entrada.inicia_at)
+  const elegida = horaPedida(entrada.inicia_at, libres)
+  const dia = elegida ? null : libres.filter((e) => diaQuito(e) === entrada.inicia_at.slice(0, 10))
   const otras = () =>
-    repartir(libres).map((e) => ({ inicia_at: e.toISOString(), etiqueta: etiquetaHora(e) }))
-  if (!libres.some((e) => e.getTime() === pedido)) {
-    return { ok: false, error: 'HORA_NO_DISPONIBLE', espacios: otras() }
-  }
+    (dia?.length ? dia : repartir(libres)).map((e) => ({
+      inicia_at: e.toISOString(),
+      etiqueta: etiquetaHora(e),
+    }))
+  if (!elegida) return { ok: false, error: 'HORA_NO_DISPONIBLE', espacios: otras() }
+  const pedido = elegida.getTime()
 
   const db = supabaseAdmin()
   if (anterior) await db.from('citas').update({ estado: 'cancelada' }).eq('id', anterior.id)

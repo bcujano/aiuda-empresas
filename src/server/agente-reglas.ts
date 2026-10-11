@@ -75,7 +75,13 @@ export const esquemaCanal = z
   .refine((d) => d.chatwoot_cuenta_id || d.chatwoot_bandeja_id, 'Falta la cuenta o la bandeja')
 
 /** El agente pide horas libres para ofrecer. */
-export const esquemaDisponibilidad = organizacion.extend({ telefono })
+export const esquemaDisponibilidad = organizacion.extend({
+  telefono,
+  fecha: z.preprocess(
+    (v) => (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : undefined),
+    z.string().optional(),
+  ),
+})
 
 /** El agente reserva (o reprograma) una de las horas que le dio la agenda. */
 export const esquemaAgendar = organizacion.extend({
