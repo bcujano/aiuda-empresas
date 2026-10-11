@@ -15,12 +15,15 @@ export function Encabezado({ boton }: { boton: ReactNode }) {
   return (
     <header className="sticky top-0 z-30 border-[var(--linea)] border-b bg-[rgb(251_248_243/0.85)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-        <span className="flex flex-col leading-none" style={{ fontFamily: 'var(--font-titulo)' }}>
-          <span className="font-extrabold text-xl tracking-tight">
+        <span className="flex flex-col">
+          <span
+            className="font-extrabold text-xl leading-tight tracking-tight"
+            style={{ fontFamily: 'var(--font-titulo)' }}
+          >
             aiuda<span className="text-[var(--esmeralda)]">.</span>
-            <span className="ml-1 font-extrabold text-xl tracking-tight">ADS</span>
+            <span className="ml-1 font-semibold text-[var(--tinta-suave)] text-sm">ADS</span>
           </span>
-          <span className="mt-1 font-medium text-[11px] text-[var(--tinta-suave)]">
+          <span className="-mt-0.5 text-[10px] text-[var(--tinta-suave)] leading-none">
             un servicio de Aiuda Empresas
           </span>
         </span>
