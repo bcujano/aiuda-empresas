@@ -49,6 +49,7 @@ export const esquemaOrganizacion = z.object({
       .string()
       .regex(/^([a-z0-9]+_)?$/, 'El prefijo va en minúsculas y termina en guion bajo (ej. fagal_)'),
   ),
+  caso_publico: z.preprocess((v) => v === 'on', z.boolean()),
   drive_carpeta_id: opcional(/^[A-Za-z0-9_-]{10,80}$/, 'El ID de la carpeta de Drive no es válido'),
 })
 

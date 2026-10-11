@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { elegirOrganizacion } from '@/app/panel/acciones'
 import { FormOrganizacion } from '@/components/panel/form-organizacion'
@@ -33,7 +34,12 @@ export default async function Organizaciones() {
 
   return (
     <div className="flex flex-col gap-4">
-      <h1 className="font-bold text-2xl tracking-tight">Clientes</h1>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h1 className="font-bold text-2xl tracking-tight">Clientes</h1>
+        <Link className="boton boton-suave" href="/panel/testimonios">
+          Reseñas de la landing
+        </Link>
+      </div>
 
       <Tarjeta>
         <CabeceraTarjeta titulo="Todos los clientes" />

@@ -114,6 +114,11 @@ export function FormOrganizacion({ org, planes }: { org: Organizacion; planes: P
           ))}
         </fieldset>
       ))}
+      <label className="flex items-center gap-2 text-sm">
+        <input defaultChecked={org.caso_publico} name="caso_publico" type="checkbox" />
+        Mostrar como cliente en la landing de Aiuda, con sus números en vivo (solo con su
+        autorización)
+      </label>
       <div className="flex flex-wrap items-center gap-2">
         <button className="boton boton-primario" disabled={pendiente} type="submit">
           Guardar cliente

@@ -38,6 +38,7 @@ export type Organizacion = {
   drive_carpeta_id: string | null
   wa_waba_id: string | null
   prefijo_plantillas: string
+  caso_publico: boolean
   created_at: string
   updated_at: string
 }

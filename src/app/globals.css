@@ -179,3 +179,89 @@ input:focus-visible {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgb(0 0 0 / 0.08);
 }
+
+/*
+ * Landing de Aiuda Empresas: marfil, tinta azul y un solo color de acción
+ * (esmeralda). Todo vive bajo .landing-aiuda para no tocar el panel.
+ */
+.landing-aiuda {
+  --marfil: #fbf8f3;
+  --arena: #f3ece0;
+  --linea: #e6dccb;
+  --tinta: #0f1e33;
+  --tinta-suave: #4b5565;
+  --esmeralda: #0b8a5a;
+  --esmeralda-claro: #e3f4ec;
+  --marca: var(--esmeralda);
+  background: var(--marfil);
+  color: var(--tinta);
+}
+.landing-aiuda h1,
+.landing-aiuda h2,
+.landing-aiuda h3 {
+  font-family: var(--font-titulo), Inter, system-ui, sans-serif;
+  letter-spacing: -0.02em;
+}
+.landing-aiuda a:focus-visible,
+.landing-aiuda button:focus-visible,
+.landing-aiuda input:focus-visible,
+.landing-aiuda select:focus-visible,
+.landing-aiuda summary:focus-visible {
+  outline: 2px solid var(--esmeralda);
+  outline-offset: 2px;
+}
+.landing-aiuda .fondo-cuadricula {
+  background-image:
+    radial-gradient(circle at 80% 10%, rgb(11 138 90 / 0.12), transparent 40%),
+    radial-gradient(circle at 10% 90%, rgb(15 30 51 / 0.08), transparent 45%);
+}
+
+@keyframes aparecer-burbuja {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes puntos-escribiendo {
+  0%,
+  80%,
+  100% {
+    opacity: 0.25;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+@keyframes latido {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(11 138 90 / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 12px rgb(11 138 90 / 0);
+  }
+}
+.burbuja {
+  animation: aparecer-burbuja 0.35s ease-out both;
+}
+.punto-escribiendo {
+  animation: puntos-escribiendo 1.2s infinite;
+}
+.boton-latido {
+  animation: latido 2.4s infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .burbuja,
+  .punto-escribiendo,
+  .boton-latido {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
+}
