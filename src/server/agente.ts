@@ -217,9 +217,16 @@ export async function registrarDesdeAgente(
     },
   ].filter(Boolean) as { tipo: string; contenido: string; autor?: string }[]
   if (actividad.length > 0) {
-    await db
-      .from('actividad')
-      .insert(actividad.map((a) => ({ ...a, organizacion_id: org.id, lead_id: leadId })))
+    await db.from('actividad').insert(
+      // Un milisegundo entre filas: el historial ordena por hora y el mensaje del
+      // cliente debe quedar antes de la respuesta del agente.
+      actividad.map((a, i) => ({
+        ...a,
+        organizacion_id: org.id,
+        lead_id: leadId,
+        created_at: new Date(Date.parse(ahora) + i).toISOString(),
+      })),
+    )
   }
   const vigente = etapa === 'calificado' ? await citaVigente(org.id, leadId) : null
   await despuesDeTurno(org.id, leadId, {
