@@ -20,6 +20,7 @@ const AREAS_POR_PLAN: Record<EstadoPlan, ReadonlySet<Area>> = {
     'exportar',
     'usuarios',
     'conocimiento',
+    'prospectos',
   ]),
   activo: new Set([
     'leads',
@@ -29,6 +30,7 @@ const AREAS_POR_PLAN: Record<EstadoPlan, ReadonlySet<Area>> = {
     'exportar',
     'usuarios',
     'conocimiento',
+    'prospectos',
   ]),
   restringido: new Set(['leads', 'citas']),
   suspendido: new Set(),

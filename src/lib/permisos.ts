@@ -15,6 +15,7 @@ export type Area =
   | 'exportar'
   | 'usuarios'
   | 'conocimiento'
+  | 'prospectos'
   | 'organizaciones'
 
 const PERMISOS: Record<Rol, ReadonlySet<Area>> = {
@@ -26,9 +27,19 @@ const PERMISOS: Record<Rol, ReadonlySet<Area>> = {
     'exportar',
     'usuarios',
     'conocimiento',
+    'prospectos',
     'organizaciones',
   ]),
-  admin: new Set(['leads', 'citas', 'angulos', 'reportes', 'exportar', 'usuarios', 'conocimiento']),
+  admin: new Set([
+    'leads',
+    'citas',
+    'angulos',
+    'reportes',
+    'exportar',
+    'usuarios',
+    'conocimiento',
+    'prospectos',
+  ]),
   operador: new Set(['leads', 'citas']),
 }
 

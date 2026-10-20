@@ -7,7 +7,7 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
  * cliente se lleva si deja el servicio: sus datos son suyos.
  */
 
-export const EXPORTABLES = ['leads', 'citas', 'actividad', 'seguimientos'] as const
+export const EXPORTABLES = ['leads', 'citas', 'actividad', 'seguimientos', 'prospectos'] as const
 export type Exportable = (typeof EXPORTABLES)[number]
 
 type Fila = Record<string, unknown>
@@ -51,6 +51,23 @@ const COLUMNAS: Record<Exportable, { select: string; orden: string; columnas: Co
       { titulo: 'Origen', valor: (r) => t(r.origen) },
       { titulo: 'Confirmada', valor: (r) => f(r.confirmada_at) },
       { titulo: 'Notas', valor: (r) => t(r.notas) },
+    ],
+  },
+  prospectos: {
+    select: '*',
+    orden: 'created_at',
+    columnas: [
+      { titulo: 'Empresa', valor: (r) => t(r.nombre) },
+      { titulo: 'Segmento', valor: (r) => t(r.segmento) },
+      { titulo: 'Teléfono', valor: (r) => t(r.telefono) },
+      { titulo: 'WhatsApp', valor: (r) => t(r.telefono_wa) },
+      { titulo: 'Correo', valor: (r) => t(r.email) },
+      { titulo: 'Sitio web', valor: (r) => t(r.website) },
+      { titulo: 'Dirección', valor: (r) => t(r.direccion) },
+      { titulo: 'WhatsApp enviado', valor: (r) => f(r.whatsapp_at) },
+      { titulo: 'Correo enviado', valor: (r) => f(r.email_at) },
+      { titulo: 'Respondió', valor: (r) => f(r.respondio_at) },
+      { titulo: 'Baja', valor: (r) => f(r.baja_at) },
     ],
   },
   actividad: {

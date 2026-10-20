@@ -17,6 +17,7 @@ const AREAS: Area[] = [
   'exportar',
   'usuarios',
   'conocimiento',
+  'prospectos',
   'organizaciones',
 ]
 
