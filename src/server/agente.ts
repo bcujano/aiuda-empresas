@@ -1,4 +1,5 @@
 import { etiquetaHora } from '@/lib/agenda'
+import { pideBaja } from '@/lib/seguimientos'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { ventanaAbierta } from '@/lib/whatsapp'
 import type { Angulo, Lead } from '@/types/database'
@@ -11,6 +12,7 @@ import {
   resolverAngulo,
   TOPE_MENSAJES_DIA,
 } from './agente-reglas'
+import { prospectoRespondio } from './contacto-frio'
 import { despuesDeTurno } from './seguimientos'
 
 /**
@@ -53,6 +55,8 @@ export type Contexto = {
   tope_alcanzado: boolean
   /** Reunión vigente del lead (reservada o confirmada por el equipo). */
   cita_vigente: { etiqueta: string; modalidad: string; estado: string } | null
+  /** Si la persona estaba en la lista de contacto en frío: empresa y sector con que se le escribió. */
+  contacto_previo: { empresa: string; segmento: string | null } | null
   /** Dónde se copia la conversación para el equipo humano (null si no tiene Chatwoot). */
   canal: { chatwoot_cuenta_id: number; chatwoot_bandeja_id: number } | null
 }
@@ -71,6 +75,7 @@ export async function contextoAgente(entrada: {
     leadPorTelefono(org.id, entrada.telefono),
     db.from('conocimiento').select('datos').eq('organizacion_id', org.id).maybeSingle(),
   ])
+  const previo = await prospectoRespondio(org.id, entrada.telefono, pideBaja(entrada.texto))
   const [memoria, cita] = lead
     ? await Promise.all([historialDelLead(org.id, lead.id), citaVigente(org.id, lead.id)])
     : [{ historial: [], mensajes_hoy: 0 }, null]
@@ -112,6 +117,7 @@ export async function contextoAgente(entrada: {
     cita_vigente: cita
       ? { etiqueta: etiquetaHora(cita.inicia_at), modalidad: cita.modalidad, estado: cita.estado }
       : null,
+    contacto_previo: previo ? { empresa: previo.nombre, segmento: previo.segmento } : null,
     canal:
       org.chatwoot_cuenta_id && org.chatwoot_bandeja_id
         ? {

@@ -67,3 +67,13 @@
 - Credencial de Chatwoot por organización (hoy usa la de Fagal): al sumar el cliente #2.
 - Agenda real con Google Calendar (hoy pide horarios y el equipo confirma).
 - Notas de voz (hoy pide escribirlo).
+
+## Contacto en frío (workflow de avisos)
+
+Cada 20 minutos pide al CRM `/api/agente/frio` hasta 3 contactos por canal. El CRM decide: solo
+lunes a viernes 09:00–17:00 Quito, máximo `campanas_frio.por_dia` por canal, nunca a quien dio la
+baja o ya respondió, y el correo solo a quien no tiene WhatsApp o no respondió en `dias_correo`.
+WhatsApp sale con la plantilla `<prefijo>contacto_inicial` (2 variables: «equipo de X» y X); el correo
+sale por Gmail con el texto de `campanas_frio`. El resultado vuelve a `/api/agente/frio_resultado`.
+La campaña nace apagada (`activa = false`). La baja por correo es `/baja/<token>`; la baja por
+WhatsApp («BAJA») la detecta `contextoAgente`.
