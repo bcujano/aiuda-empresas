@@ -77,3 +77,10 @@ WhatsApp sale con la plantilla `<prefijo>contacto_inicial` (2 variables: «equip
 sale por Gmail con el texto de `campanas_frio`. El resultado vuelve a `/api/agente/frio_resultado`.
 La campaña nace apagada (`activa = false`). La baja por correo es `/baja/<token>`; la baja por
 WhatsApp («BAJA») la detecta `contextoAgente`.
+
+### Cambios del 2026-10-20 (publicados en n8n; el `.sdk.ts` del agente aún no los refleja)
+
+- **Agente:** una conversación asignada a una persona en Chatwoot (asignado ≠ «Agente Fagal», id 12) o con la etiqueta `humano` silencia al agente.
+  Si detecta un bot o IA (regla 14 del prompt), no responde, deja nota privada, pone las etiquetas `bot` y `humano`, descarta el lead y da de baja al prospecto.
+- **Contacto en frío:** cada 10 min el workflow de avisos pide `/frio_registros` y crea en Chatwoot el contacto y una conversación `pending` con una nota privada (nunca sale al cliente); marca `/frio_registrado`.
+- **Correo en frío pausado** hasta tener la credencial de Gmail de Fagal: el nodo «Frío por correo» quedó sin conexión.
