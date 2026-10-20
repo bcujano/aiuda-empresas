@@ -12,7 +12,14 @@ import {
   esquemaSeguimiento,
   secretoValido,
 } from '@/server/agente-reglas'
-import { esquemaResultadoFrio, marcarProspecto, prospectosPorEnviar } from '@/server/contacto-frio'
+import {
+  esquemaRegistroFrio,
+  esquemaResultadoFrio,
+  marcarProspecto,
+  marcarRegistro,
+  prospectosPorEnviar,
+  registrosPorHacer,
+} from '@/server/contacto-frio'
 import { marcarRecordatorio, recordatoriosPendientes } from '@/server/recordatorios'
 import { marcarSeguimiento, seguimientosPorEnviar } from '@/server/seguimientos'
 
@@ -27,6 +34,8 @@ import { marcarSeguimiento, seguimientosPorEnviar } from '@/server/seguimientos'
  *   POST /api/agente/recordatorio_enviado → marca un recordatorio como entregado
  *   POST /api/agente/seguimientos → seguimientos por enviar ahora (ya decidido el canal)
  *   POST /api/agente/frio → contactos en frío por enviar ahora (WhatsApp con plantilla y correo)
+ *   POST /api/agente/frio_registros → WhatsApp en frío por registrar en Chatwoot
+ *   POST /api/agente/frio_registrado → marca el registro hecho
  *   POST /api/agente/frio_resultado → marca un contacto en frío como enviado o fallido
  *   POST /api/agente/seguimiento_resultado → marca un seguimiento como enviado o fallido
  * Los errores van como códigos en MAYÚSCULAS para que el workflow los distinga.
@@ -102,6 +111,16 @@ export async function POST(peticion: Request, { params }: { params: Promise<{ ac
 
   if (accion === 'frio') {
     return NextResponse.json({ contactos: await prospectosPorEnviar() })
+  }
+
+  if (accion === 'frio_registros') {
+    return NextResponse.json({ registros: await registrosPorHacer() })
+  }
+
+  if (accion === 'frio_registrado') {
+    const analisis = esquemaRegistroFrio.safeParse(cuerpo)
+    if (!analisis.success) return invalido(analisis.error.issues)
+    return NextResponse.json({ ok: await marcarRegistro(analisis.data) })
   }
 
   if (accion === 'frio_resultado') {

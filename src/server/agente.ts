@@ -163,6 +163,13 @@ export async function registrarDesdeAgente(
     if (datos.etapa === 'descartado' && !datos.motivo_descarte) {
       return { ok: false, error: 'FALTA_MOTIVO_DESCARTE' }
     }
+    // Si del otro lado hay un bot o una IA, no se le vuelve a escribir (ni por correo).
+    if (
+      datos.etapa === 'descartado' &&
+      /autom[aá]tic|\bbot\b|\bIA\b/i.test(datos.motivo_descarte ?? '')
+    ) {
+      await prospectoRespondio(org.id, datos.telefono, true)
+    }
     cambios.etapa = datos.etapa
     cambios.motivo_descarte = datos.etapa === 'descartado' ? datos.motivo_descarte : null
   }
