@@ -50,6 +50,7 @@ const clasificar = node({
         "  tipo: entrante ? 'cliente' : 'persona',\n" +
         "  cuenta: b.account.id, conversacion_id: conv.id, mensaje_id: b.id, wamid: b.source_id ?? null,\n" +
         "  contacto_id: conv.meta?.sender?.id ?? (entrante ? remitente.id : null) ?? null,\n" +
+        "  asignado_a: conv.meta?.assignee?.id ?? null,\n" +
         "  etiquetas: conv.labels ?? [], telefono, texto,\n" +
         "  nombre_perfil: entrante ? nombre : '', remitente: nombre,\n" +
         "} }];",
@@ -314,7 +315,7 @@ const sinPersona = ifElse({
     parameters: {
       conditions: {
         options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
-        conditions: [{ leftValue: expr("{{ [...($json.payload ?? []), ...($('Clasificar mensaje').first().json.etiquetas ?? [])].includes('humano') }}"), operator: { type: 'boolean', operation: 'false', singleValue: true } }],
+        conditions: [{ leftValue: expr("{{ [...($json.payload ?? []), ...($('Clasificar mensaje').first().json.etiquetas ?? [])].includes('humano') || ($('Clasificar mensaje').first().json.asignado_a != null && $('Clasificar mensaje').first().json.asignado_a !== 12) }}"), operator: { type: 'boolean', operation: 'false', singleValue: true } }],
         combinator: 'and',
       },
     },
@@ -382,7 +383,7 @@ const verHorarios = tool({
   config: {
     name: 'ver_horarios',
     parameters: {
-      toolDescription: "Devuelve las horas libres reales de la agenda del estudio (lista 'espacios' con 'inicia_at' y 'etiqueta'), las modalidades y la dirección. Úsala SIEMPRE antes de ofrecer o mencionar cualquier fecha u hora.",
+      toolDescription: "Devuelve las horas libres reales de la agenda del estudio (lista 'espacios' con 'inicia_at' y 'etiqueta'), las modalidades y la dirección. Sin fecha: unas pocas opciones repartidas (mañana, mediodía y tarde) de varios días. Con fecha (AAAA-MM-DD): TODAS las horas libres de ese día; úsala cuando la persona pida un día u hora concreta. Úsala SIEMPRE antes de ofrecer o mencionar cualquier fecha u hora.",
       method: 'POST',
       url: `${CRM}/api/agente/disponibilidad`,
       authentication: 'genericCredentialType',
@@ -390,7 +391,7 @@ const verHorarios = tool({
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono }) }}"),
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, fecha: $fromAI('fecha', 'Opcional. Día AAAA-MM-DD si la persona pidió un día concreto; vacío para ver opciones repartidas de varios días', 'string') }) }}"),
       options: { timeout: 15000 },
     },
     credentials: credCrm,
@@ -411,7 +412,7 @@ const agendarCita = tool({
       sendBody: true,
       contentType: 'json',
       specifyBody: 'json',
-      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, inicia_at: $fromAI('inicia_at', 'Valor inicia_at exacto (ISO) de la hora elegida, copiado de ver_horarios', 'string'), modalidad: $fromAI('modalidad', 'virtual o presencial', 'string') }) }}"),
+      jsonBody: expr("{{ JSON.stringify({ phone_number_id: $('Canal del CRM').first().json.phone_number_id, telefono: $('Clasificar mensaje').first().json.telefono, inicia_at: $fromAI('inicia_at', 'Valor inicia_at EXACTO, copiado letra por letra de ver_horarios (no lo construyas tú)', 'string'), modalidad: $fromAI('modalidad', 'virtual o presencial', 'string') }) }}"),
       options: { timeout: 15000 },
     },
     credentials: credCrm,
@@ -434,6 +435,7 @@ const agente = node({
           "SERVICIOS (solo estos existen): {{ JSON.stringify($('Contexto del CRM').first().json.servicios) }}\n" +
           "INFORMACIÓN DEL ESTUDIO (lo único que puedes afirmar sobre él): {{ JSON.stringify($('Contexto del CRM').first().json.conocimiento) }}\n" +
           "SERVICIO POR EL QUE LLEGÓ (código): {{ $('Contexto del CRM').first().json.angulo_detectado ?? 'desconocido' }}\n" +
+          "CONTACTO EN FRÍO (si no es null, nosotros le escribimos primero a esta empresa con una plantilla que ofrecía una breve reunión con un abogado; la persona está respondiendo a eso): {{ JSON.stringify($('Contexto del CRM').first().json.contacto_previo ?? null) }}\n" +
           "LO QUE YA SABEMOS DE ESTA PERSONA: {{ JSON.stringify($('Contexto del CRM').first().json.lead) }}\n" +
           "REUNIÓN VIGENTE: {{ JSON.stringify($('Contexto del CRM').first().json.cita_vigente ?? null) }}\n" +
           "CONVERSACIÓN ANTERIOR (de la más antigua a la más reciente; 'equipo' es una persona del estudio): {{ JSON.stringify($('Contexto del CRM').first().json.historial ?? []) }}\n" +
@@ -453,7 +455,9 @@ const agente = node({
           '10. Si ya hay REUNIÓN VIGENTE y la persona quiere cambiarla: si ya dijo el nuevo día u hora, llama a ver_horarios con esa fecha y a agendar_cita en este mismo turno (reprograma sola, sin pedir confirmación); si no lo dijo, pregúntale qué día le queda mejor. Si solo pregunta por su reunión, dile la etiqueta.\n' +
           '11. Las notas de voz llegan transcritas como [Nota de voz] y las imágenes descritas como [Imagen]: respóndelas con normalidad. Si dice [Envió una nota de voz] o [Envió un archivo o imagen] sin contenido, pide amablemente que lo escriba en texto.\n' +
           '12. Si la persona se queja o se confunde, discúlpate una sola vez, en una frase, y sigue con el siguiente paso.\n' +
-          '13. Nunca respondas «deme un momento», «estoy consultando» ni «le confirmo luego»: tú no puedes escribir después. Si necesitas horarios, llama a ver_horarios ahora y responde ya. Conversación natural y corta: nunca pidas la misma confirmación dos veces.\n\n' +
+          '13. Nunca respondas «deme un momento», «estoy consultando» ni «le confirmo luego»: tú no puedes escribir después. Si necesitas horarios, llama a ver_horarios ahora y responde ya. Conversación natural y corta: nunca pidas la misma confirmación dos veces.\n' +
+          '14. DETECTA SI DEL OTRO LADO HAY UN BOT O UNA IA: respuestas automáticas de empresa («gracias por comunicarse, nuestro horario es…», «marque 1 para…», menús con opciones numeradas, «soy el asistente virtual de…», «no puedo ayudarle con eso» repetido, el mismo texto de siempre sin responder a lo que se preguntó). Si lo detectas, NO le contestes: devuelve respuesta "" (vacía), etapa "descartado" y motivo_descarte "Interlocutor automático (bot o IA)". Una sola respuesta automática de «gracias por escribir» a nuestro primer mensaje cuenta como bot.\n' +
+          '15. Si hay CONTACTO EN FRÍO y la persona acaba de responder con interés («sí, me interesa» o similar), agradécele y sigue con la calificación normal: no repitas la presentación. Si responde BAJA, no, o que no le escriban, despídete en una frase y no insistas.\n\n' +
           'FORMATO: tu respuesta final es SOLO un JSON válido, sin texto antes ni después y sin bloques de código:\n' +
           '{"respuesta":"mensaje para WhatsApp","datos":{"nombre":null,"empresa":null,"cargo":null,"colaboradores":null,"ciudad":null,"necesidad":null,"urgencia":null,"encaje":null,"etapa":null,"motivo_descarte":null}}\n' +
           'En datos pon solo lo que la persona dijo en esta conversación; lo demás va en null. colaboradores: "1-9", "10-49", "50-199" o "200+". urgencia: "baja", "media" o "alta". encaje: entero de 0 a 100 según qué tan bien encaja con los servicios. etapa: null, "calificado" o "descartado".',
@@ -479,7 +483,22 @@ const leerRespuesta = node({
         "const crudo = String($input.first().json.output ?? '').replace(/^```(?:json)?\\s*/i, '').replace(/```\\s*$/, '').trim();\n" +
         "let respuesta = crudo; let datos = {};\n" +
         "try { const p = JSON.parse(crudo.slice(crudo.indexOf('{'), crudo.lastIndexOf('}') + 1)); respuesta = String(p.respuesta ?? '').trim(); datos = p.datos ?? {}; } catch (e) {}\n" +
-        "if (!respuesta) respuesta = 'Gracias por escribir. En un momento le ayudamos.';\n" +
+        "// Si del otro lado hay un bot o una IA, el agente se calla y no vuelve a escribir.\n" +
+        "const automatico = datos.etapa === 'descartado' && /autom[aá]tic|\\bbot\\b|\\bIA\\b/i.test(String(datos.motivo_descarte ?? ''));\n" +
+        "if (automatico) respuesta = '';\n" +
+        "else if (!respuesta) respuesta = 'Gracias por escribir. En un momento le ayudamos.';\n" +
+        "// Guardia: el agente no puede decir que reservó o cambió una reunión si agendar_cita no devolvió ok=true en este turno.\n" +
+        "let reservo = false;\n" +
+        "try { reservo = $('agendar_cita').all().some((i) => i.json?.ok === true); } catch (e) {}\n" +
+        "const vigente = $('Contexto del CRM').first().json.cita_vigente;\n" +
+        "const afirma = /(he (reservado|reprogramado|agendado|cambiado|registrado su (cita|reuni))|(qued[oó]|ha quedado) (agendad|reservad|reprogramad|cambiad|confirmad|registrad))/i.test(respuesta);\n" +
+        "const horaVigente = vigente?.etiqueta ? String(vigente.etiqueta).split(', ').pop() : null;\n" +
+        "const hablaDeLaVigente = horaVigente && respuesta.includes(horaVigente);\n" +
+        "if (respuesta && afirma && !reservo && !hablaDeLaVigente) {\n" +
+        "  respuesta = vigente\n" +
+        "    ? 'Para hacer el cambio sin errores, ¿me confirma el día y la hora que prefiere? Por ahora su reunión sigue el ' + vigente.etiqueta + '.'\n" +
+        "    : 'Para reservarla sin errores, ¿me confirma el día y la hora que prefiere?';\n" +
+        "}\n" +
         "const limpio = {};\n" +
         "for (const c of ['nombre','empresa','cargo','ciudad','necesidad','motivo_descarte']) { if (typeof datos[c] === 'string' && datos[c].trim()) limpio[c] = datos[c].trim().slice(0, c === 'necesidad' ? 500 : 160); }\n" +
         "if (['1-9','10-49','50-199','200+'].includes(datos.colaboradores)) limpio.colaboradores = datos.colaboradores;\n" +
@@ -487,13 +506,14 @@ const leerRespuesta = node({
         "const encaje = datos.encaje == null || datos.encaje === '' ? NaN : Number(datos.encaje); if (Number.isInteger(encaje) && encaje >= 0 && encaje <= 100) limpio.encaje = encaje;\n" +
         "if (datos.etapa === 'calificado' || (datos.etapa === 'descartado' && limpio.motivo_descarte)) limpio.etapa = datos.etapa;\n" +
         "if (limpio.etapa !== 'descartado') delete limpio.motivo_descarte;\n" +
-        "const cuerpo_crm = { phone_number_id: pnid, telefono: m.telefono, texto: m.texto, mensaje_entrante: m.texto, mensaje_agente: respuesta, chatwoot_conversacion_id: m.conversacion_id, ...limpio };\n" +
+        "const cuerpo_crm = { phone_number_id: pnid, telefono: m.telefono, texto: m.texto, mensaje_entrante: m.texto, chatwoot_conversacion_id: m.conversacion_id, ...limpio };\n" +
+        "if (respuesta) cuerpo_crm.mensaje_agente = respuesta;\n" +
         "if (m.contacto_id) cuerpo_crm.chatwoot_contacto_id = m.contacto_id;\n" +
         "if (!limpio.nombre && m.nombre_perfil) cuerpo_crm.nombre = String(m.nombre_perfil).slice(0, 120);\n" +
         "const avisar = limpio.etapa === 'calificado' && previa === 'nuevo';\n" +
         "const d = { ...($('Contexto del CRM').first().json.lead ?? {}), ...limpio };\n" +
         "const nota = ['Lead calificado por el agente. Falta confirmar la reunión.', 'Nombre: ' + (d.nombre ?? cuerpo_crm.nombre ?? '—'), 'Empresa: ' + (d.empresa ?? '—'), 'Cargo: ' + (d.cargo ?? '—'), 'Colaboradores: ' + (d.colaboradores ?? '—'), 'Ciudad: ' + (d.ciudad ?? '—'), 'Necesidad: ' + (d.necesidad ?? '—'), 'Urgencia: ' + (d.urgencia ?? '—')].join('\\n');\n" +
-        "return [{ json: { respuesta, cuenta: m.cuenta, conversacion_id: m.conversacion_id, cuerpo_crm, avisar, nota } }];",
+        "return [{ json: { respuesta, silencio: automatico, cuenta: m.cuenta, conversacion_id: m.conversacion_id, cuerpo_crm, avisar, nota } }];",
     },
   },
   output: [{ respuesta: 'Hola', cuenta: 4, conversacion_id: 10, cuerpo_crm: {}, avisar: false, nota: '' }],
@@ -661,6 +681,62 @@ const etiquetaCalificado = node({
   output: [{ payload: ['calificado'] }],
 });
 
+const responder = ifElse({
+  version: 2.2,
+  config: {
+    name: '¿Responder?',
+    parameters: {
+      conditions: {
+        options: { caseSensitive: true, leftValue: '', typeValidation: 'loose' },
+        conditions: [{ leftValue: expr('{{ $json.silencio === true }}'), operator: { type: 'boolean', operation: 'false', singleValue: true } }],
+        combinator: 'and',
+      },
+    },
+  },
+});
+
+const notaBot = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: nota interlocutor automático',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $json.cuenta }}/conversations/{{ $json.conversacion_id }}/messages`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ content: 'Interlocutor automático detectado (bot o IA): el agente dejó de responder y no se le volverá a escribir. Si cree que es una persona, quite la etiqueta «bot» y «humano».', message_type: 'outgoing', private: true }) }}"),
+    },
+    credentials: credCw,
+  },
+  output: [{ id: 102 }],
+});
+
+const etiquetaBot = node({
+  type: 'n8n-nodes-base.httpRequest',
+  version: 4.5,
+  config: {
+    name: 'Chatwoot: etiqueta bot',
+    onError: 'continueRegularOutput',
+    parameters: {
+      method: 'POST',
+      url: expr(`${CW}/{{ $('Leer respuesta del agente').first().json.cuenta }}/conversations/{{ $('Leer respuesta del agente').first().json.conversacion_id }}/labels`),
+      authentication: 'genericCredentialType',
+      genericAuthType: 'httpHeaderAuth',
+      sendBody: true,
+      contentType: 'json',
+      specifyBody: 'json',
+      jsonBody: expr("{{ JSON.stringify({ labels: [...new Set([...($('Chatwoot: leer etiquetas').first().json.payload || []), 'bot', 'humano'])] }) }}"),
+    },
+    credentials: credCw,
+  },
+  output: [{ payload: ['bot', 'humano'] }],
+});
+
 export default workflow('aiuda-empresas-agente', 'Aiuda Empresas · Agente WhatsApp')
   .add(desdeChatwoot)
   .to(clasificar)
@@ -675,6 +751,6 @@ export default workflow('aiuda-empresas-agente', 'Aiuda Empresas · Agente Whats
   .to(dentroTope.onTrue(agente).onFalse(guardarEntrante))
   .add(agente)
   .to(leerRespuesta)
-  .to(publicarRespuesta)
-  .to(guardarCrm)
+  .to(responder.onTrue(publicarRespuesta.to(guardarCrm)).onFalse(notaBot.to(etiquetaBot.to(guardarCrm))))
+  .add(guardarCrm)
   .to(hayAviso.onTrue(notaCalificado.to(etiquetaCalificado)));

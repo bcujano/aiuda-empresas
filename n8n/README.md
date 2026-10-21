@@ -78,7 +78,7 @@ sale por Gmail con el texto de `campanas_frio`. El resultado vuelve a `/api/agen
 La campaña nace apagada (`activa = false`). La baja por correo es `/baja/<token>`; la baja por
 WhatsApp («BAJA») la detecta `contextoAgente`.
 
-### Cambios del 2026-10-20 (publicados en n8n; el `.sdk.ts` del agente aún no los refleja)
+### Cambios del 2026-10-20 (publicados en n8n y reflejados en `agente-aiuda-empresas.sdk.ts`, con sintaxis revisada; el `.sdk.ts` no se ha vuelto a validar contra n8n)
 
 - **Agente:** una conversación asignada a una persona en Chatwoot (asignado ≠ «Agente Fagal», id 12) o con la etiqueta `humano` silencia al agente.
   Si detecta un bot o IA (regla 14 del prompt), no responde, deja nota privada, pone las etiquetas `bot` y `humano`, descarta el lead y da de baja al prospecto.
