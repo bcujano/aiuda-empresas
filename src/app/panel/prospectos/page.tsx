@@ -51,6 +51,8 @@ export default async function Prospectos({
   ])
   const conEstado = todos.map((p) => ({ p, e: estadoDe(p) }))
   const cuenta = (e: EstadoProspecto) => conEstado.filter((x) => x.e === e).length
+  const contactados = todos.filter((p) => p.whatsapp_at || p.email_at).length
+  const respondieron = todos.filter((p) => p.respondio_at).length
   const buscado = (q ?? '').toLowerCase()
   const vistos = conEstado
     .filter((x) => !estado || x.e === estado)
@@ -72,6 +74,23 @@ export default async function Prospectos({
         {permite(sesion, 'exportar') ? (
           <Descargas tipos={[{ tipo: 'prospectos', texto: 'Prospectos (Excel)' }]} />
         ) : null}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {[
+          ['Contactados', contactados],
+          ['Respondieron', respondieron],
+          [
+            'Tasa de respuesta',
+            contactados ? `${Math.round((respondieron / contactados) * 100)} %` : '—',
+          ],
+          ['Correo', 'Apagado'],
+        ].map(([t, v]) => (
+          <div className="tarjeta p-3" key={t}>
+            <p className="font-bold text-xl tabular-nums">{v}</p>
+            <p className="text-[var(--texto-suave)] text-xs">{t}</p>
+          </div>
+        ))}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">

@@ -13,3 +13,17 @@ describe('contacto en frío', () => {
     expect(rellenarCorreo('Hola {empresa}, {x}', { empresa: 'Acme' })).toBe('Hola Acme, ')
   })
 })
+
+describe('alternar por sector', () => {
+  it('toma por turnos de cada sector', async () => {
+    const { alternarPorSegmento } = await import('@/server/contacto-frio')
+    const l = [
+      { n: 1, segmento: 'a' },
+      { n: 2, segmento: 'a' },
+      { n: 3, segmento: 'a' },
+      { n: 4, segmento: 'b' },
+      { n: 5, segmento: 'c' },
+    ]
+    expect(alternarPorSegmento(l, 4).map((x) => x.n)).toEqual([1, 4, 5, 2])
+  })
+})

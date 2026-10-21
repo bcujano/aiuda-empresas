@@ -45,6 +45,27 @@ export function enHorarioDeContacto(ahora: Date): boolean {
   return dia >= 1 && dia <= 5 && hora >= HORA_DESDE && hora < HORA_HASTA
 }
 
+/** Reparte por turnos entre sectores: así un sector flojo no se come todo el cupo del día. */
+export function alternarPorSegmento<T extends { segmento: string | null }>(
+  lista: T[],
+  n: number,
+): T[] {
+  const grupos = new Map<string, T[]>()
+  for (const p of lista) grupos.set(p.segmento ?? '', [...(grupos.get(p.segmento ?? '') ?? []), p])
+  const colas = [...grupos.values()]
+  const salida: T[] = []
+  for (let i = 0; salida.length < n && colas.some((c) => c.length > i); i++) {
+    for (const c of colas) {
+      const p = c[i]
+      if (p && salida.length < n) salida.push(p)
+    }
+  }
+  return salida
+}
+
+/** El correo en frío está apagado «hasta segunda orden»: solo sale con CORREO_FRIO_ACTIVO=true en el despliegue. */
+const CORREO_ACTIVO = () => process.env.CORREO_FRIO_ACTIVO === 'true'
+
 export function rellenarCorreo(texto: string, v: Record<string, string>): string {
   return texto.replace(/\{(\w+)\}/g, (_, k: string) => v[k] ?? '')
 }
@@ -86,8 +107,8 @@ export async function prospectosPorEnviar(ahora: Date = new Date()): Promise<unk
       const { data } = await base()
         .not('telefono_wa', 'is', null)
         .is('whatsapp_at', null)
-        .limit(cupoWa)
-      for (const p of (data ?? []) as Prospecto[]) {
+        .limit(120)
+      for (const p of alternarPorSegmento((data ?? []) as Prospecto[], cupoWa)) {
         salida.push({
           id: p.id,
           canal: 'whatsapp',
@@ -99,7 +120,7 @@ export async function prospectosPorEnviar(ahora: Date = new Date()): Promise<unk
       }
     }
     const cupoEm = Math.min(POR_TANDA, c.por_dia - em)
-    if (cupoEm > 0) {
+    if (cupoEm > 0 && CORREO_ACTIVO()) {
       const espera = new Date(ahora.getTime() - c.dias_correo * 86_400_000).toISOString()
       const { data } = await base()
         .not('email', 'is', null)
