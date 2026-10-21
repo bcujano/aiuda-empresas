@@ -35,8 +35,16 @@ export async function agregarProspectosAccion(
 ): Promise<Resultado> {
   const sesion = await exigir('prospectos')
   if (!sesion || sesion.usuario.rol === 'operador') return { error: 'No tienes permiso.' }
-  const r = await agregarProspectos(sesion.org.id, String(datos.get('lista') ?? ''))
-  if (r.leidos === 0) return { error: 'No encontré ninguna línea con el nombre de una empresa.' }
+  const archivo = datos.get('archivo')
+  let texto = String(datos.get('lista') ?? '')
+  if (typeof archivo === 'object' && archivo !== null && archivo.size > 0) {
+    if (archivo.size > 3_000_000) return { error: 'El archivo pesa más de 3 MB.' }
+    texto = await archivo.text()
+  }
+  const codigo = String(datos.get('angulo_codigo') ?? '').trim() || null
+  const r = await agregarProspectos(sesion.org.id, texto, codigo)
+  if (r.leidos === 0)
+    return { error: 'No encontré empresas. En un CSV hace falta una columna «Nombre» o «Empresa».' }
   revalidatePath('/panel/prospectos')
   const repetidos = r.leidos - r.nuevos
   return {

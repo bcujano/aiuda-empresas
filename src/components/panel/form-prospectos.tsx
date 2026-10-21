@@ -65,16 +65,33 @@ export function FormCampana({ c }: { c: Campana }) {
   )
 }
 
-export function FormLista() {
+export function FormLista({ angulos }: { angulos: { codigo: string; servicio: string }[] }) {
   const [estado, accion, pendiente] = useActionState<Resultado, FormData>(
     agregarProspectosAccion,
     {},
   )
   return (
     <form action={accion} className="flex flex-col gap-3 p-4">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex flex-col gap-1 text-sm">
+          <label htmlFor="archivo">Archivo CSV del Prospector (botón «CSV»)</label>
+          <input accept=".csv,text/csv" className="campo" id="archivo" name="archivo" type="file" />
+        </div>
+        <div className="flex flex-col gap-1 text-sm">
+          <label htmlFor="angulo_codigo">Servicio con el que se les habla</label>
+          <select className="campo" defaultValue="" id="angulo_codigo" name="angulo_codigo">
+            <option value="">Genérico</option>
+            {angulos.map((a) => (
+              <option key={a.codigo} value={a.codigo}>
+                {a.servicio}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
       <label className="text-sm" htmlFor="lista">
-        Una empresa por línea: <b>Empresa; teléfono; correo; sector</b> (solo la empresa es
-        obligatoria). Puedes pegar desde Excel.
+        O pega a mano. Una empresa por línea: <b>Empresa; teléfono; correo; sector</b> (solo la
+        empresa es obligatoria). Puedes pegar desde Excel.
       </label>
       <textarea
         className="campo min-h-32"

@@ -13,6 +13,7 @@ import {
 } from '@/components/ui/primitivos'
 import { exigir, permite } from '@/lib/auth'
 import { fechaHora } from '@/lib/formato'
+import { listarAngulos } from '@/server/citas-y-angulos'
 import {
   campanaDe,
   type EstadoProspecto,
@@ -43,9 +44,10 @@ export default async function Prospectos({
   const sesion = await exigir('prospectos')
   if (!sesion) redirect('/panel')
   const { estado, q } = await searchParams
-  const [todos, campana] = await Promise.all([
+  const [todos, campana, angulos] = await Promise.all([
     listarProspectos(sesion.org.id),
     campanaDe(sesion.org.id),
+    listarAngulos(sesion.org.id),
   ])
   const conEstado = todos.map((p) => ({ p, e: estadoDe(p) }))
   const cuenta = (e: EstadoProspecto) => conEstado.filter((x) => x.e === e).length
@@ -133,7 +135,7 @@ export default async function Prospectos({
               </tr>
             </thead>
             <tbody>
-              {vistos.slice(0, 300).map(({ p, e }) => (
+              {vistos.map(({ p, e }) => (
                 <tr key={p.id}>
                   <Td>
                     <p className="font-medium">{p.nombre}</p>
@@ -151,7 +153,7 @@ export default async function Prospectos({
                       </p>
                     ) : null}
                   </Td>
-                  <Td className="text-xs">
+                  <Td className="text-xs" orden={p.whatsapp_at ?? p.email_at ?? ''}>
                     {p.whatsapp_at ? <p>WhatsApp {fechaHora(p.whatsapp_at)}</p> : null}
                     {p.email_at ? <p>Correo {fechaHora(p.email_at)}</p> : null}
                   </Td>
@@ -170,7 +172,7 @@ export default async function Prospectos({
       {edita ? (
         <Tarjeta>
           <CabeceraTarjeta titulo="Agregar prospectos" />
-          <FormLista />
+          <FormLista angulos={angulos.map((a) => ({ codigo: a.codigo, servicio: a.servicio }))} />
         </Tarjeta>
       ) : null}
     </div>

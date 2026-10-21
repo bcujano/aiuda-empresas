@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { leerCsv } from '@/lib/csv'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { normalizarTelefono } from '@/lib/telefono'
 
@@ -118,18 +119,94 @@ export function leerLista(texto: string) {
   return filas
 }
 
+const sinTildes = (s: string) =>
+  s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+
+/** Lee el CSV que exporta el Prospector (o cualquiera con columnas de empresa, teléfono, correo…). */
+export function leerListaCsv(texto: string) {
+  const [cabecera = [], ...filas] = leerCsv(texto)
+  const col = (...nombres: string[]) => cabecera.findIndex((h) => nombres.includes(sinTildes(h)))
+  const iNombre = col('nombre', 'empresa')
+  const iTel = col('telefono')
+  const iWa = col('whatsapp')
+  const iCorreo = col('emails', 'email', 'correo', 'correos')
+  const iSeg = col('segmentos', 'segmento', 'sector')
+  const iWeb = col('website', 'web', 'sitio web')
+  const iDir = col('direccion')
+  if (iNombre < 0) return []
+  const dato = (f: string[], i: number) => (i >= 0 ? (f[i] ?? '').trim() : '')
+  return filas
+    .map((f) => {
+      const tel = dato(f, iTel)
+      const wa = normalizarTelefono(dato(f, iWa) || tel)
+      const esMovil = wa?.startsWith('+5939') || dato(f, iWa).startsWith('+')
+      const correo = dato(f, iCorreo)
+        .split(/[;, ]+/)
+        .find((e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e))
+      return {
+        nombre: dato(f, iNombre).slice(0, 200),
+        telefono: tel || null,
+        telefono_wa: wa && esMovil ? wa : null,
+        email: correo ? correo.toLowerCase() : null,
+        segmento: dato(f, iSeg).split(';')[0]?.trim() || null,
+        website: dato(f, iWeb) || null,
+        direccion: dato(f, iDir) || null,
+      }
+    })
+    .filter((f) => f.nombre.length >= 2)
+}
+
+type FilaNueva = ReturnType<typeof leerListaCsv>[number] & { angulo_codigo?: string | null }
+
+/** Inserta en bloques y sin repetir WhatsApp ni correo que ya existan (nunca fila por fila). */
+export async function insertarProspectos(
+  orgId: string,
+  filas: FilaNueva[],
+): Promise<{ nuevos: number; leidos: number }> {
+  const db = supabaseAdmin()
+  const { data } = await db
+    .from('prospectos')
+    .select('telefono_wa, email')
+    .eq('organizacion_id', orgId)
+    .limit(20000)
+  const wa = new Set<string>()
+  const em = new Set<string>()
+  for (const p of (data ?? []) as { telefono_wa: string | null; email: string | null }[]) {
+    if (p.telefono_wa) wa.add(p.telefono_wa)
+    if (p.email) em.add(p.email.toLowerCase())
+  }
+  const nuevas: (FilaNueva & { organizacion_id: string })[] = []
+  for (const f of filas.slice(0, 3000)) {
+    if ((f.telefono_wa && wa.has(f.telefono_wa)) || (f.email && em.has(f.email))) continue
+    if (f.telefono_wa) wa.add(f.telefono_wa)
+    if (f.email) em.add(f.email)
+    nuevas.push({ ...f, organizacion_id: orgId })
+  }
+  let nuevos = 0
+  for (let i = 0; i < nuevas.length; i += 200) {
+    const bloque = nuevas.slice(i, i + 200)
+    const { error } = await db.from('prospectos').insert(bloque)
+    if (!error) nuevos += bloque.length
+    await new Promise((r) => setTimeout(r, 150))
+  }
+  return { nuevos, leidos: filas.length }
+}
+
 export async function agregarProspectos(
   orgId: string,
   texto: string,
+  anguloCodigo?: string | null,
 ): Promise<{ nuevos: number; leidos: number }> {
-  const filas = leerLista(texto).slice(0, 500)
-  const db = supabaseAdmin()
-  let nuevos = 0
-  for (const f of filas) {
-    const { error } = await db.from('prospectos').insert({ ...f, organizacion_id: orgId })
-    if (!error) nuevos++
-  }
-  return { nuevos, leidos: filas.length }
+  const filas = (
+    texto.includes('\n') && /^[^\n]*(nombre|empresa)[^\n]*(tel|correo|email)/i.test(texto)
+      ? leerListaCsv(texto)
+      : leerLista(texto).map((f) => ({ ...f, website: null, direccion: null }))
+  ).map((f) => ({ ...f, angulo_codigo: anguloCodigo ?? null }))
+  return insertarProspectos(orgId, filas)
 }
 
 export async function cambiarProspecto(

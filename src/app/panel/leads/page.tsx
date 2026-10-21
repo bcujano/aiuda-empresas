@@ -122,7 +122,7 @@ export default async function Leads({
                     <Etiqueta>{ETAPA_LEGIBLE[l.etapa]}</Etiqueta>
                     {l.no_contactar ? <Etiqueta tono="peligro">No contactar</Etiqueta> : null}
                   </Td>
-                  <Td>{fechaHora(l.updated_at)}</Td>
+                  <Td orden={l.updated_at}>{fechaHora(l.updated_at)}</Td>
                 </tr>
               ))}
             </tbody>
