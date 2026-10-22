@@ -164,7 +164,7 @@ export function secretoValido(recibido: string | null, esperado: string): boolea
  * que también dice una persona).
  */
 const AUTOMATICO =
-  /\b(te saluda|le saluda|nos contactaremos|nos comunicaremos|en breve (nos|me|le)|horario de atenci[oó]n|fuera de (nuestro )?horario|mensaje autom[aá]tico|respuesta autom[aá]tica|no pudo ser procesado|marque (1|uno|2|dos)|digite|n[uú]mero de c[eé]dula|pol[ií]tica de protecci[oó]n|bit\.ly|asistente virtual|gracias por (comunicarte|comunicarse|contactarte|contactarnos) con)\b/i
+  /\b(te saluda|le saluda|nos contactaremos|nos comunicaremos|en breve (nos|me|le)|horario de atenci[oó]n|fuera de (nuestro )?horario|mensaje autom[aá]tico|respuesta autom[aá]tica|no pudo ser procesado|marque (1|uno|2|dos)|digite|n[uú]mero de c[eé]dula|pol[ií]tica de protecci[oó]n|bit\.ly|asistente virtual|gracias por (comunicarte|comunicarse|contactarte|contactarnos) con|en unos minutos (te|le|nos) (respondemos|responderemos|atendemos|atenderemos)|nuestras redes sociales|linktr\.ee)/i
 
 export function esRespuestaAutomatica(texto: string | undefined): boolean {
   return !!texto && AUTOMATICO.test(texto)

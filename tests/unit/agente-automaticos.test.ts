@@ -13,6 +13,12 @@ describe('mensajes de máquinas', () => {
       true,
     )
     expect(esRespuestaAutomatica('Tu mensaje no pudo ser procesado por WhatsApp')).toBe(true)
+    expect(
+      esRespuestaAutomatica(
+        'Gracias por escribirnos. Somos Anticipa Seguros. En unos minutos te respondemos personalmente.',
+      ),
+    ).toBe(true)
+    expect(esRespuestaAutomatica('Nuestras redes sociales https://linktr.ee/tienda')).toBe(true)
     expect(esRespuestaAutomatica('Buenos días gracias por su mensaje')).toBe(false)
     expect(esRespuestaAutomatica('le comento que si disponemos de un departamento legal')).toBe(
       false,
