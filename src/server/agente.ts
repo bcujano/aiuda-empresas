@@ -1,5 +1,4 @@
 import { etiquetaHora } from '@/lib/agenda'
-import { pideBaja } from '@/lib/seguimientos'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { ventanaAbierta } from '@/lib/whatsapp'
 import type { Angulo, Lead } from '@/types/database'
@@ -12,7 +11,7 @@ import {
   resolverAngulo,
   TOPE_MENSAJES_DIA,
 } from './agente-reglas'
-import { prospectoRespondio } from './contacto-frio'
+import { contactoEnFrio, prospectoRespondio } from './contacto-frio-respuestas'
 import { despuesDeTurno } from './seguimientos'
 
 /**
@@ -51,6 +50,8 @@ export type Contexto = {
   ventana_abierta: boolean
   /** Conversación previa guardada en el CRM, de la más antigua a la más reciente. */
   historial: LineaHistorial[]
+  /** true si el mensaje lo escribió una máquina (saludo automático, menú, eco): el agente no responde. */
+  respuesta_automatica: boolean
   /** true si la persona pasó el tope de mensajes del día: el agente no responde. */
   tope_alcanzado: boolean
   /** Reunión vigente del lead (reservada o confirmada por el equipo). */
@@ -75,10 +76,10 @@ export async function contextoAgente(entrada: {
     leadPorTelefono(org.id, entrada.telefono),
     db.from('conocimiento').select('datos').eq('organizacion_id', org.id).maybeSingle(),
   ])
-  const previo = await prospectoRespondio(org.id, entrada.telefono, pideBaja(entrada.texto))
   const [memoria, cita] = lead
     ? await Promise.all([historialDelLead(org.id, lead.id), citaVigente(org.id, lead.id)])
     : [{ historial: [], mensajes_hoy: 0 }, null]
+  const { previo, historial, automatica } = await contactoEnFrio(org.id, entrada, memoria.historial)
   const detectado = resolverAngulo(angulos, org.codigo, entrada) ?? lead?.angulo_id ?? null
   const angulo = angulos.find((a) => a.id === detectado)
 
@@ -112,7 +113,8 @@ export async function contextoAgente(entrada: {
       : null,
     // Si escribe ahora, la ventana está abierta; si no hay lead aún, también.
     ventana_abierta: lead ? ventanaAbierta(lead.ultimo_inbound_at, lead.ventana_horas) : true,
-    historial: memoria.historial,
+    historial,
+    respuesta_automatica: automatica,
     tope_alcanzado: memoria.mensajes_hoy >= TOPE_MENSAJES_DIA,
     cita_vigente: cita
       ? { etiqueta: etiquetaHora(cita.inicia_at), modalidad: cita.modalidad, estado: cita.estado }

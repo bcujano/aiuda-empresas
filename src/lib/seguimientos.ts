@@ -35,3 +35,18 @@ export function ventanaLibre(ultimoInbound: string | null, horas: number, ahora:
   if (!ultimoInbound) return false
   return Date.parse(ultimoInbound) + horas * 3_600_000 - 5 * 60_000 > ahora.getTime()
 }
+
+const PALABRAS_DE_EMPRESA =
+  /\b(inmobiliaria|seguros?|constructora|concesionari[ao]|grupo|servicio|asesor(es|ia)?|corporaci[oó]n|compa[nñ][ií]a|cia|s\.?a\.?|cl|ltda|motors?|autos?|bienes|transporte|logistica|log[ií]stica|broker|corredor(es)?)\b/i
+
+/** Primer nombre de pila, solo si parece el de una persona: el perfil de WhatsApp suele ser el de una empresa o un número. */
+export function nombreDePila(
+  nombre: string | null | undefined,
+  empresa?: string | null,
+): string | undefined {
+  const n = (nombre ?? '').trim()
+  if (!n || /[\d+#@|]/.test(n) || n.split(/\s+/).length > 3 || PALABRAS_DE_EMPRESA.test(n))
+    return undefined
+  if (empresa && n.toLowerCase() === empresa.trim().toLowerCase()) return undefined
+  return n.split(/\s+/)[0]
+}

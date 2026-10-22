@@ -1,4 +1,11 @@
-import { horaDeEnviar, type Paso, pideBaja, rellenar, ventanaLibre } from '@/lib/seguimientos'
+import {
+  horaDeEnviar,
+  nombreDePila,
+  type Paso,
+  pideBaja,
+  rellenar,
+  ventanaLibre,
+} from '@/lib/seguimientos'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import type { Lead, Organizacion } from '@/types/database'
 
@@ -132,7 +139,7 @@ export async function seguimientosPorEnviar(limite = 30) {
       (angulo as { servicio: string } | null)?.servicio ?? 'nuestros servicios'
     ).toLowerCase()
     const v = {
-      nombre: lead.nombre?.split(' ')[0],
+      nombre: nombreDePila(lead.nombre, lead.empresa),
       organizacion: org.nombre,
       especialista: org.especialista,
       servicio,

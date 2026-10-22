@@ -157,3 +157,28 @@ export function secretoValido(recibido: string | null, esperado: string): boolea
   }
   return diferencia === 0
 }
+
+/**
+ * Mensajes que escribe una máquina, no una persona: saludos y avisos automáticos de WhatsApp Business,
+ * menús y formularios de otros bots. Se detectan por frases propias de ellos (no por «gracias por escribir»,
+ * que también dice una persona).
+ */
+const AUTOMATICO =
+  /\b(te saluda|le saluda|nos contactaremos|nos comunicaremos|en breve (nos|me|le)|horario de atenci[oó]n|fuera de (nuestro )?horario|mensaje autom[aá]tico|respuesta autom[aá]tica|no pudo ser procesado|marque (1|uno|2|dos)|digite|n[uú]mero de c[eé]dula|pol[ií]tica de protecci[oó]n|bit\.ly|asistente virtual|gracias por (comunicarte|comunicarse|contactarte|contactarnos) con)\b/i
+
+export function esRespuestaAutomatica(texto: string | undefined): boolean {
+  return !!texto && AUTOMATICO.test(texto)
+}
+
+const normal = (t: string) =>
+  t
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim()
+
+/** ¿El mensaje repite lo que le escribió el agente? Un bot que devuelve nuestro texto no es una persona. */
+export function esEco(texto: string | undefined, ultimoDelAgente: string | undefined): boolean {
+  if (!texto || !ultimoDelAgente) return false
+  const a = normal(ultimoDelAgente)
+  return a.length >= 20 && normal(texto).includes(a)
+}

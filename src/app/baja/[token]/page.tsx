@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { darDeBajaPorToken } from '@/server/contacto-frio'
+import { darDeBajaPorToken } from '@/server/contacto-frio-respuestas'
 
 export const metadata: Metadata = { title: 'Darse de baja', robots: { index: false } }
 

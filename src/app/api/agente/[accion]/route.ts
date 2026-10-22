@@ -12,14 +12,12 @@ import {
   esquemaSeguimiento,
   secretoValido,
 } from '@/server/agente-reglas'
+import { esquemaResultadoFrio, marcarProspecto, prospectosPorEnviar } from '@/server/contacto-frio'
 import {
   esquemaRegistroFrio,
-  esquemaResultadoFrio,
-  marcarProspecto,
   marcarRegistro,
-  prospectosPorEnviar,
   registrosPorHacer,
-} from '@/server/contacto-frio'
+} from '@/server/contacto-frio-respuestas'
 import { marcarRecordatorio, recordatoriosPendientes } from '@/server/recordatorios'
 import { marcarSeguimiento, seguimientosPorEnviar } from '@/server/seguimientos'
 
