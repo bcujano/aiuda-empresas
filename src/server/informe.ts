@@ -110,7 +110,15 @@ export async function armarInforme(
   const delLead = new Map<string, Msg[]>()
   for (const m of msgs) delLead.set(m.lead_id, [...(delLead.get(m.lead_id) ?? []), m])
 
-  const contactados = prospectos.filter((x) => x.whatsapp_at || x.email_at)
+  // Ventana del informe: los últimos 14 días (hoy incluido), hora de Quito.
+  const VENTANA = 14
+  const ahora = Date.now()
+  const hoy = diaIso(new Date(ahora).toISOString())
+  const inicio = diaIso(new Date(ahora - (VENTANA - 1) * 86_400_000).toISOString())
+  const diaContacto = (x: Pros) => diaIso((x.whatsapp_at ?? x.email_at) as string)
+  const contactados = prospectos.filter(
+    (x) => (x.whatsapp_at || x.email_at) && diaContacto(x) >= inicio,
+  )
   const reales = contactados.filter(
     (x) => x.respondio_at && !esBot(porTel.get(digitos(x.telefono_wa))),
   )
@@ -136,15 +144,20 @@ export async function armarInforme(
   const tibios = conversaron.filter(
     (x) => !INTERESADAS.includes(x.etapa) && x.etapa !== 'descartado' && entrantes(x) >= 2,
   )
-  const rechazos = frios.length
-  const bajas = prospectos.filter((x) => x.baja_at).length - automaticas
+  const enVentana = new Set(contactados.map((x) => digitos(x.telefono_wa)))
+  const rechazos = frios.filter((x) => enVentana.has(digitos(x.telefono))).length
+  const bajas = contactados.filter((x) => x.baja_at).length - automaticas
 
-  const porDia = new Map<string, number>()
-  for (const x of contactados)
-    porDia.set(
-      diaIso((x.whatsapp_at ?? x.email_at) as string),
-      (porDia.get(diaIso((x.whatsapp_at ?? x.email_at) as string)) ?? 0) + 1,
-    )
+  const porDia = new Map<string, { n: number; resp: number }>()
+  for (let i = VENTANA - 1; i >= 0; i--) {
+    porDia.set(diaIso(new Date(ahora - i * 86_400_000).toISOString()), { n: 0, resp: 0 })
+  }
+  for (const x of contactados) {
+    const t = porDia.get(diaContacto(x))
+    if (!t) continue
+    t.n++
+    if (reales.includes(x)) t.resp++
+  }
   const sectores = new Map<string, { n: number; respondieron: number; interesadas: number }>()
   for (const x of contactados) {
     const k = x.segmento ?? 'Otros'
@@ -191,13 +204,13 @@ export async function armarInforme(
   if (charlas.length < 2) charlas.push(CHARLA_ILUSTRATIVA)
 
   const inversion = opciones.inversion ?? 50
-  const desde = [...porDia.keys()].sort()[0] ?? diaIso(new Date().toISOString())
+  const desde = [...porDia.keys()].sort()[0] ?? inicio
   const sFoco = porSector.find((s) => s.sector === foco)
   const costo = contactados.length ? (inversion / contactados.length).toFixed(2) : '—'
   return {
     cliente: (o as { nombre: string } | null)?.nombre ?? '',
     desde,
-    hasta: diaIso(new Date().toISOString()),
+    hasta: hoy,
     inversion,
     contactadas: contactados.length,
     respondieron: reales.length,
@@ -206,7 +219,8 @@ export async function armarInforme(
     automaticas,
     rechazos,
     bajas: Math.max(0, bajas),
-    porDia: [...porDia].sort().map(([dia, n]) => ({ dia, n })),
+    porDia: [...porDia].sort().map(([dia, t]) => ({ dia, ...t })),
+    ventanaDias: VENTANA,
     porSector,
     foco,
     calientes: calientes.slice(0, 5).map((x) => persona(x, 'Quiere reunirse')),

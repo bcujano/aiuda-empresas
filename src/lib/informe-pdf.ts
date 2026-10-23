@@ -11,6 +11,7 @@ import {
   pct,
   SUAVE,
   TINTA,
+  usd,
   W,
 } from './informe-pdf-base'
 import { paginasFinales } from './informe-pdf-final'
@@ -46,7 +47,7 @@ export function informePdf(d: Informe): Promise<Buffer> {
     size: 12,
     color: '#c9d3e3',
   })
-  texto(`Resultados del testeo con la inversión inicial de US$ ${d.inversion}`, M, 180, {
+  texto(`Últimos ${d.ventanaDias} días · inversión inicial de US$ ${d.inversion}`, M, 180, {
     size: 11,
     bold: true,
     color: '#5ee0a7',
@@ -92,11 +93,15 @@ export function informePdf(d: Informe): Promise<Buffer> {
       texto(pct(n, etapas[i - 1]?.[1] ?? 0), M + 100 + bw + 40, yy + 7, { size: 8.5, color: SUAVE })
   })
 
-  y = seccion('Empresas contactadas por día', d.explicaciones.actividad, y + 4 * 34 + 12)
+  y = seccion(
+    `Empresas contactadas por día (últimos ${d.ventanaDias} días)`,
+    `${d.explicaciones.actividad} Barra verde: contactadas. Barra oscura: respondieron.`,
+    y + 4 * 34 + 12,
+  )
   const gx = M + 24
   const gh = 130
   const gw = W - 2 * M - 24
-  const dias = d.porDia.slice(-14)
+  const dias = d.porDia.slice(-d.ventanaDias)
   const maxD = Math.max(1, ...dias.map((x) => x.n))
   for (let k = 0; k <= 3; k++) {
     const yy = y + 14 + gh - (gh * k) / 3
@@ -112,6 +117,15 @@ export function informePdf(d: Informe): Promise<Buffer> {
     const alto = (x.n / maxD) * gh
     const bx = gx + i * paso + paso * 0.18
     caja(bx, y + 14 + gh - alto, paso * 0.64, alto, 3, ESMERALDA)
+    if (x.resp > 0)
+      caja(
+        bx + paso * 0.22,
+        y + 14 + gh - (x.resp / maxD) * gh,
+        paso * 0.2,
+        (x.resp / maxD) * gh,
+        2,
+        TINTA,
+      )
     texto(String(x.n), bx - 4, y + 14 + gh - alto - 11, {
       size: 7,
       bold: true,
@@ -134,9 +148,45 @@ export function informePdf(d: Informe): Promise<Buffer> {
   texto('aiuda.', M, 28, { size: 11, bold: true })
   texto('ADS', M + 36, 28, { size: 11, bold: true, color: ESMERALDA })
   y = seccion(
+    'Efectividad de la campaña',
+    'Lo que rinde cada dólar y cada mensaje, y si vamos mejorando semana a semana.',
+    60,
+  )
+  const costo = (n: number) => (n > 0 ? usd(d.inversion / n) : '—')
+  const mets: [string, string][] = [
+    [pct(d.respondieron, d.contactadas), 'respuesta de personas'],
+    [
+      d.contactadas ? ((d.interesadas / d.contactadas) * 100).toFixed(1) : '—',
+      'interesadas por cada 100',
+    ],
+    [costo(d.respondieron), 'por conversación real'],
+    [costo(d.interesadas), 'por empresa interesada'],
+  ]
+  const mw = (W - 2 * M - 36) / 4
+  mets.forEach(([v, l], i) => {
+    const x = M + i * (mw + 12)
+    caja(x, y, mw, 56, 10, '#ffffff', LINEA)
+    texto(v, x + 12, y + 9, { size: 17, bold: true, color: ESMERALDA })
+    texto(l, x + 12, y + 36, { size: 7.5, color: SUAVE, width: mw - 20 })
+  })
+  const u7 = d.porDia.slice(-7)
+  const a7 = d.porDia.slice(-14, -7)
+  const cu = u7.reduce((t, x) => t + x.n, 0)
+  const ru = u7.reduce((t, x) => t + x.resp, 0)
+  const ca = a7.reduce((t, x) => t + x.n, 0)
+  const ra = a7.reduce((t, x) => t + x.resp, 0)
+  texto(
+    ca > 0
+      ? `Últimos 7 días: ${cu} contactadas y ${pct(ru, cu)} de respuesta. Los 7 días anteriores: ${ca} contactadas y ${pct(ra, ca)}.`
+      : `Primera semana de la campaña: ${cu} contactadas y ${pct(ru, cu)} de respuesta. Aún no hay semana anterior para comparar.`,
+    M,
+    y + 66,
+    { size: 9, bold: true, color: TINTA, width: W - 2 * M },
+  )
+  y = seccion(
     'Números transparentes',
     'Todo lo que pasó con cada empresa contactada, sin maquillaje: lo bueno y lo que no.',
-    60,
+    y + 98,
   )
   const filas: [string, number, string][] = [
     ['Empresas contactadas', d.contactadas, 'A cada una se le escribió una vez.'],

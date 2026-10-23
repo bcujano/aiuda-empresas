@@ -139,17 +139,28 @@ export function EditorInforme({ inicial, claveLocal }: { inicial: Informe; clave
       <Bloque titulo="2 · Actividad por día y por sector">
         <div className="grid gap-2 sm:grid-cols-4">
           {d.porDia.map((x, i) => (
-            <Num
-              alCambiar={(n) =>
-                poner(
-                  'porDia',
-                  d.porDia.map((y, j) => (j === i ? { ...y, n } : y)),
-                )
-              }
-              etiqueta={`Contactadas el ${x.dia}`}
-              key={x.dia}
-              valor={x.n}
-            />
+            <div className="grid grid-cols-2 gap-1" key={x.dia}>
+              <Num
+                alCambiar={(n) =>
+                  poner(
+                    'porDia',
+                    d.porDia.map((y, j) => (j === i ? { ...y, n } : y)),
+                  )
+                }
+                etiqueta={`${x.dia.slice(5)} contactadas`}
+                valor={x.n}
+              />
+              <Num
+                alCambiar={(n) =>
+                  poner(
+                    'porDia',
+                    d.porDia.map((y, j) => (j === i ? { ...y, resp: n } : y)),
+                  )
+                }
+                etiqueta="respondieron"
+                valor={x.resp}
+              />
+            </div>
           ))}
         </div>
         <Explicacion alCambiar={(v) => exp('actividad', v)} valor={d.explicaciones.actividad} />

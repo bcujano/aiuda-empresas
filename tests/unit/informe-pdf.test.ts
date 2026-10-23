@@ -22,10 +22,11 @@ const muestra: Informe = {
   automaticas: 9,
   rechazos: 4,
   bajas: 1,
+  ventanaDias: 14,
   porDia: [
-    { dia: '2026-10-20', n: 10 },
-    { dia: '2026-10-21', n: 25 },
-    { dia: '2026-10-22', n: 27 },
+    { dia: '2026-10-20', n: 10, resp: 1 },
+    { dia: '2026-10-21', n: 25, resp: 4 },
+    { dia: '2026-10-22', n: 27, resp: 9 },
   ],
   porSector: [
     { sector: 'inmobiliarias', n: 24, respondieron: 7, interesadas: 2 },

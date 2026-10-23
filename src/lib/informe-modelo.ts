@@ -35,7 +35,8 @@ export const esquemaInforme = z.object({
   automaticas: numero,
   rechazos: numero,
   bajas: numero,
-  porDia: z.array(z.object({ dia: texto(10), n: numero })).max(31),
+  porDia: z.array(z.object({ dia: texto(10), n: numero, resp: numero })).max(31),
+  ventanaDias: numero,
   porSector: z
     .array(z.object({ sector: texto(60), n: numero, respondieron: numero, interesadas: numero }))
     .max(10),
