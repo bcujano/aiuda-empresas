@@ -1,67 +1,37 @@
 import PDFDocument from 'pdfkit'
-import type { Informe } from '@/server/informe'
+import type { Informe } from '@/lib/informe-modelo'
+import {
+  ARENA,
+  ESMERALDA,
+  FONDO,
+  fechaCorta,
+  herramientas,
+  LINEA,
+  M,
+  pct,
+  SUAVE,
+  TINTA,
+  W,
+} from './informe-pdf-base'
+import { paginasFinales } from './informe-pdf-final'
 
-/** Informe de campañas en PDF vectorial (gráficos dibujados, no imágenes). A4 vertical, dos páginas. */
-
-const TINTA = '#0f1e33'
-const ESMERALDA = '#0b8a5a'
-const ARENA = '#f3ece0'
-const LINEA = '#e6dccb'
-const SUAVE = '#5b6577'
-const W = 595
-const M = 40
-
-const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-const fechaCorta = (iso: string) =>
-  `${Number(iso.slice(8, 10))} ${MESES[Number(iso.slice(5, 7)) - 1]}`
-const pct = (a: number, b: number) => (b ? `${Math.round((a / b) * 100)} %` : '—')
+/** Informe de campañas en PDF vectorial (gráficos dibujados, no imágenes). A4 vertical. */
 
 export function informePdf(d: Informe): Promise<Buffer> {
   const doc = new PDFDocument({
     size: 'A4',
     margin: 0,
-    info: { Title: `Informe de campañas · ${d.organizacion.nombre}` },
+    info: { Title: `Informe de campañas · ${d.cliente}` },
   })
   const trozos: Buffer[] = []
   doc.on('data', (t: Buffer) => trozos.push(t))
   const listo = new Promise<Buffer>((res) => doc.on('end', () => res(Buffer.concat(trozos))))
+  const h = herramientas(doc)
+  const { texto, caja, seccion } = h
+  const TOTAL = 5
 
-  const texto = (
-    t: string,
-    x: number,
-    y: number,
-    o: {
-      size?: number
-      color?: string
-      bold?: boolean
-      width?: number
-      align?: 'left' | 'center' | 'right'
-    } = {},
-  ) => {
-    doc
-      .font(o.bold ? 'Helvetica-Bold' : 'Helvetica')
-      .fontSize(o.size ?? 10)
-      .fillColor(o.color ?? TINTA)
-    doc.text(t, x, y, { width: o.width, align: o.align, lineBreak: o.width !== undefined })
-  }
-  const caja = (
-    x: number,
-    y: number,
-    w: number,
-    h: number,
-    r: number,
-    relleno: string,
-    borde?: string,
-  ) => {
-    doc.roundedRect(x, y, w, h, r).fillAndStroke(relleno, borde ?? relleno)
-  }
-  const titulo = (t: string, y: number) => {
-    doc.rect(M, y + 2, 3, 14).fill(ESMERALDA)
-    texto(t, M + 10, y, { size: 13, bold: true })
-  }
-
-  // ── Página 1: portada y cifras ─────────────────────────────
-  doc.rect(0, 0, W, 842).fill('#fbf8f3')
+  // ── 1: portada, cifras, embudo y actividad ────────────────
+  doc.rect(0, 0, W, 842).fill(FONDO)
   doc.rect(0, 0, W, 232).fill(TINTA)
   doc
     .circle(W - 40, 30, 150)
@@ -72,7 +42,7 @@ export function informePdf(d: Informe): Promise<Buffer> {
   texto('ADS', M + 44, 40, { size: 15, bold: true, color: '#5ee0a7' })
   texto('INFORME DE CAMPAÑAS', M, 105, { size: 10, bold: true, color: '#5ee0a7' })
   texto('Resultados de captación', M, 122, { size: 30, bold: true, color: '#ffffff' })
-  texto(`${d.organizacion.nombre}  ·  ${fechaCorta(d.desde)} al ${fechaCorta(d.hasta)}`, M, 160, {
+  texto(`${d.cliente}  ·  ${fechaCorta(d.desde)} al ${fechaCorta(d.hasta)}`, M, 160, {
     size: 12,
     color: '#c9d3e3',
   })
@@ -82,49 +52,54 @@ export function informePdf(d: Informe): Promise<Buffer> {
     color: '#5ee0a7',
   })
 
-  const kpis: [string, string, string][] = [
-    [String(d.contactadas), 'Empresas contactadas', ESMERALDA],
-    [String(d.respondieron), 'Respondieron', TINTA],
-    [String(d.interesadas), 'Interesadas en reunión', TINTA],
-    [String(d.reuniones), 'Reuniones agendadas', ESMERALDA],
+  const kpis: [number, string, string][] = [
+    [d.contactadas, 'Empresas contactadas', ESMERALDA],
+    [d.respondieron, 'Respondieron', TINTA],
+    [d.interesadas, 'Interesadas en reunión', TINTA],
+    [d.reuniones, 'Reuniones agendadas', ESMERALDA],
   ]
-  const kw = (W - 2 * M - 3 * 12) / 4
+  const kw = (W - 2 * M - 36) / 4
   kpis.forEach(([v, l, c], i) => {
     const x = M + i * (kw + 12)
     caja(x, 208, kw, 86, 12, '#ffffff', LINEA)
-    texto(v, x + 14, 224, { size: 30, bold: true, color: c })
+    texto(String(v), x + 14, 224, { size: 30, bold: true, color: c })
     texto(l, x + 14, 266, { size: 8.5, color: SUAVE, width: kw - 24 })
   })
+  texto(d.explicaciones.cifras, M, 306, { size: 8.5, color: SUAVE, width: W - 2 * M })
 
-  titulo('Embudo de la campaña', 304)
+  let y = seccion('Embudo de la campaña', d.explicaciones.embudo, 345)
   const etapas: [string, number][] = [
     ['Contactadas', d.contactadas],
     ['Respondieron', d.respondieron],
     ['Interesadas', d.interesadas],
     ['Reuniones', d.reuniones],
   ]
-  const maxE = Math.max(1, d.contactadas)
   const bw = W - 2 * M - 170
   etapas.forEach(([e, n], i) => {
-    const y = 336 + i * 38
-    texto(e, M, y + 6, { size: 10, bold: true })
-    caja(M + 100, y, bw, 24, 6, ARENA)
-    caja(M + 100, y, Math.max(n ? 8 : 0, (n / maxE) * bw), 24, 6, i === 3 ? ESMERALDA : TINTA)
-    texto(String(n), M + 100 + bw + 10, y + 6, { size: 11, bold: true })
+    const yy = y + i * 34
+    texto(e, M, yy + 6, { size: 10, bold: true })
+    caja(M + 100, yy, bw, 22, 6, ARENA)
+    caja(
+      M + 100,
+      yy,
+      Math.max(n ? 8 : 0, (n / Math.max(1, d.contactadas)) * bw),
+      22,
+      6,
+      i === 3 ? ESMERALDA : TINTA,
+    )
+    texto(String(n), M + 100 + bw + 10, yy + 5, { size: 11, bold: true })
     if (i > 0)
-      texto(pct(n, etapas[i - 1]?.[1] ?? 0), M + 100 + bw + 40, y + 7, { size: 8.5, color: SUAVE })
+      texto(pct(n, etapas[i - 1]?.[1] ?? 0), M + 100 + bw + 40, yy + 7, { size: 8.5, color: SUAVE })
   })
-  texto('El porcentaje compara cada paso con el anterior.', M + 100, 490, { size: 8, color: SUAVE })
 
-  titulo('Empresas contactadas por día', 520)
+  y = seccion('Empresas contactadas por día', d.explicaciones.actividad, y + 4 * 34 + 12)
   const gx = M + 24
-  const gy = 560
-  const gh = 150
+  const gh = 130
   const gw = W - 2 * M - 24
   const dias = d.porDia.slice(-14)
   const maxD = Math.max(1, ...dias.map((x) => x.n))
   for (let k = 0; k <= 3; k++) {
-    const yy = gy + gh - (gh * k) / 3
+    const yy = y + 14 + gh - (gh * k) / 3
     doc
       .moveTo(gx, yy)
       .lineTo(gx + gw, yy)
@@ -134,180 +109,91 @@ export function informePdf(d: Informe): Promise<Buffer> {
   }
   const paso = gw / Math.max(1, dias.length)
   dias.forEach((x, i) => {
-    const h = (x.n / maxD) * gh
+    const alto = (x.n / maxD) * gh
     const bx = gx + i * paso + paso * 0.18
-    caja(bx, gy + gh - h, paso * 0.64, h, 3, ESMERALDA)
-    texto(String(x.n), bx - 4, gy + gh - h - 11, {
+    caja(bx, y + 14 + gh - alto, paso * 0.64, alto, 3, ESMERALDA)
+    texto(String(x.n), bx - 4, y + 14 + gh - alto - 11, {
       size: 7,
       bold: true,
       width: paso * 0.64 + 8,
       align: 'center',
     })
-    texto(fechaCorta(x.dia), bx - 6, gy + gh + 6, {
+    texto(fechaCorta(x.dia), bx - 6, y + 20 + gh, {
       size: 6.5,
       color: SUAVE,
       width: paso * 0.64 + 12,
       align: 'center',
     })
   })
-  texto('aiuda.ADS · un servicio de Aiuda Empresas', M, 800, { size: 8, color: SUAVE })
-  texto('1 / 3', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
+  h.pagina(1, TOTAL, true)
 
-  // ── Página 2: sectores y conversaciones ────────────────────
+  // ── 2: números transparentes y sectores ───────────────────
   doc.addPage({ size: 'A4', margin: 0 })
-  doc.rect(0, 0, W, 842).fill('#fbf8f3')
+  doc.rect(0, 0, W, 842).fill(FONDO)
+  h.pagina(2, TOTAL, true)
   texto('aiuda.', M, 28, { size: 11, bold: true })
   texto('ADS', M + 36, 28, { size: 11, bold: true, color: ESMERALDA })
+  y = seccion(
+    'Números transparentes',
+    'Todo lo que pasó con cada empresa contactada, sin maquillaje: lo bueno y lo que no.',
+    60,
+  )
+  const filas: [string, number, string][] = [
+    ['Empresas contactadas', d.contactadas, 'A cada una se le escribió una vez.'],
+    [
+      'Respondieron como personas',
+      d.respondieron,
+      `${pct(d.respondieron, d.contactadas)} de las contactadas.`,
+    ],
+    [
+      'Respuestas automáticas',
+      d.automaticas,
+      'Asistentes o saludos de otras empresas; no cuentan como respuesta.',
+    ],
+    ['Dijeron que no', d.rechazos, 'Sin interés por ahora o ya tienen abogado.'],
+    ['Pidieron no recibir más', d.bajas, 'Se respetó de inmediato.'],
+    ['Interesadas en reunirse', d.interesadas, 'Aceptaron o pidieron coordinar una reunión.'],
+    ['Reuniones agendadas', d.reuniones, 'Con fecha y hora en la agenda.'],
+  ]
+  filas.forEach(([t, n, nota], i) => {
+    const yy = y + i * 30
+    caja(M, yy, W - 2 * M, 26, 8, i % 2 ? '#ffffff' : ARENA)
+    texto(t, M + 12, yy + 8, { size: 10, bold: true, width: 190 })
+    texto(String(n), M + 205, yy + 6, { size: 13, bold: true, color: ESMERALDA })
+    texto(nota, M + 250, yy + 9, { size: 8.5, color: SUAVE, width: W - 2 * M - 260 })
+  })
 
-  titulo('Contactos por sector', 60)
+  y = seccion('Contactos por sector', d.explicaciones.sectores, y + filas.length * 30 + 18)
   const sectores = d.porSector.slice(0, 6)
   const maxS = Math.max(1, ...sectores.map((s) => s.n))
   sectores.forEach((s, i) => {
-    const y = 92 + i * 26
-    texto(s.sector.charAt(0).toUpperCase() + s.sector.slice(1), M, y + 5, { size: 9, width: 150 })
-    const sw = W - 2 * M - 210
-    caja(M + 160, y, sw, 16, 5, ARENA)
-    caja(M + 160, y, Math.max(6, (s.n / maxS) * sw), 16, 5, i === 0 ? ESMERALDA : TINTA)
-    texto(`${s.n} · ${s.respondieron} resp.`, M + 160 + sw + 8, y + 4, {
-      size: 8.5,
-      bold: true,
-    })
-  })
-
-  const yC = Math.max(190, 92 + sectores.length * 26 + 30)
-  titulo('Conversaciones destacadas', yC)
-  texto('Conversaciones reales con el asistente; se omitieron nombres y teléfonos.', M, yC + 20, {
-    size: 8.5,
-    color: SUAVE,
-  })
-  const cw = (W - 2 * M - 16) / 2
-  const charlas = d.charlas.slice(0, 2)
-  if (charlas.length === 0) {
-    caja(M, yC + 46, W - 2 * M, 70, 12, '#ffffff', LINEA)
+    const yy = y + i * 26
+    texto(s.sector.charAt(0).toUpperCase() + s.sector.slice(1), M, yy + 5, { size: 9, width: 150 })
+    const sw = W - 2 * M - 250
+    caja(M + 160, yy, sw, 16, 5, ARENA)
+    caja(
+      M + 160,
+      yy,
+      Math.max(6, (s.n / maxS) * sw),
+      16,
+      5,
+      s.sector === d.foco ? ESMERALDA : TINTA,
+    )
     texto(
-      'Aún no hay conversaciones con interés para mostrar. Aparecerán aquí apenas lleguen.',
-      M + 16,
-      yC + 74,
-      { size: 10, color: SUAVE, width: W - 2 * M - 32 },
+      `${s.n} contactadas · ${s.respondieron} resp. · ${s.interesadas} int.`,
+      M + 160 + sw + 8,
+      yy + 4,
+      { size: 8, bold: true, width: 130 },
     )
-  }
-  const altos = (c: (typeof charlas)[number]) => {
-    doc.font('Helvetica').fontSize(8)
-    return c.mensajes.reduce(
-      (t, m) => t + doc.heightOfString(m.texto, { width: cw * 0.78 - 16 }) + 21,
-      0,
-    )
-  }
-  const alto = Math.min(380, Math.max(160, ...charlas.map(altos)) + 56)
-  charlas.forEach((c, i) => {
-    const x = M + i * (cw + 16)
-    const y0 = yC + 46
-    caja(x, y0, cw, alto, 18, '#efe7dc', LINEA)
-    caja(x, y0, cw, 30, 18, '#075e54')
-    doc.rect(x, y0 + 14, cw, 16).fill('#075e54')
-    texto(c.sector ? `Interesado · ${c.sector}` : 'Interesado', x + 14, y0 + 10, {
-      size: 9,
+  })
+  if (d.foco)
+    texto(`Sector elegido para la siguiente etapa: ${d.foco}.`, M, y + sectores.length * 26 + 8, {
+      size: 9.5,
       bold: true,
-      color: '#ffffff',
+      color: ESMERALDA,
     })
-    let y = y0 + 44
-    for (const m of c.mensajes) {
-      const ancho = cw * 0.78
-      doc.font('Helvetica').fontSize(8)
-      const h = doc.heightOfString(m.texto, { width: ancho - 16 }) + 14
-      if (y + h > y0 + alto - 8) break
-      const bx = m.de === 'asistente' ? x + cw - ancho - 10 : x + 10
-      caja(bx, y, ancho, h, 8, m.de === 'asistente' ? '#d9fdd3' : '#ffffff')
-      texto(m.texto, bx + 8, y + 7, { size: 8, width: ancho - 16 })
-      y += h + 7
-    }
-  })
 
-  const yP = yC + 46 + (charlas.length ? alto : 70) + 30
-  titulo('Próximos pasos', yP)
-  texto(
-    'Ampliar la cobertura a nuevos sectores · Afinar el mensaje con las respuestas reales · Convertir el interés en reuniones con su equipo.',
-    M + 10,
-    yP + 22,
-    { size: 9, color: SUAVE, width: W - 2 * M - 10 },
-  )
-  texto('aiuda.ADS · un servicio de Aiuda Empresas', M, 800, { size: 8, color: SUAVE })
-  texto('2 / 3', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
-
-  // ── Página 3: conclusiones y siguiente paso ────────────────
-  doc.addPage({ size: 'A4', margin: 0 })
-  doc.rect(0, 0, W, 842).fill('#fbf8f3')
-  texto('aiuda.', M, 28, { size: 11, bold: true })
-  texto('ADS', M + 36, 28, { size: 11, bold: true, color: ESMERALDA })
-  titulo('Conclusiones del testeo', 60)
-  const costo = d.contactadas ? (d.inversion / d.contactadas).toFixed(2) : '—'
-  const sFoco = d.porSector.find((x) => x.sector === d.foco)
-  const conclusiones = [
-    `Con la inversión inicial de US$ ${d.inversion} se contactaron ${d.contactadas} empresas (alrededor de US$ ${costo} por empresa).`,
-    `${d.respondieron} respondieron (${pct(d.respondieron, d.contactadas)}), ${d.interesadas} mostraron interés en reunirse y hay ${d.reuniones} reunión(es) agendada(s).`,
-    sFoco
-      ? `El sector con mejor respuesta es ${sFoco.sector}: ${sFoco.respondieron} de ${sFoco.n} empresas respondieron.`
-      : 'Aún no hay respuestas suficientes por sector para elegir un foco con datos; la siguiente tanda lo definirá.',
-    'El presupuesto de arranque limitó el volumen diario y por eso el avance fue más lento de lo ideal. El testeo cumplió su objetivo: dejó marcado el camino.',
-  ]
-  let yc = 92
-  for (const c of conclusiones) {
-    doc.circle(M + 4, yc + 6, 3).fill(ESMERALDA)
-    doc.font('Helvetica').fontSize(10)
-    const h = doc.heightOfString(c, { width: W - 2 * M - 20 })
-    texto(c, M + 16, yc, { size: 10, width: W - 2 * M - 20 })
-    yc += h + 12
-  }
-
-  titulo('Segmento a atacar', yc + 14)
-  caja(M, yc + 42, W - 2 * M, 74, 14, TINTA)
-  texto(d.foco ? 'FOCO DE LA SIGUIENTE ETAPA' : 'FOCO POR DEFINIR', M + 18, yc + 56, {
-    size: 8,
-    bold: true,
-    color: '#5ee0a7',
-  })
-  texto(
-    d.foco
-      ? d.foco.charAt(0).toUpperCase() + d.foco.slice(1)
-      : 'Se define con la siguiente tanda de datos',
-    M + 18,
-    yc + 72,
-    { size: 18, bold: true, color: '#ffffff', width: W - 2 * M - 36 },
-  )
-
-  const yd = yc + 144
-  titulo('Siguiente desembolso', yd)
-  caja(M, yd + 28, W - 2 * M, 118, 14, '#ffffff', LINEA)
-  if (d.propuestaDia) {
-    const porDolar = d.contactadas / Math.max(1, d.inversion)
-    texto('PROPUESTA DE INVERSIÓN', M + 18, yd + 44, { size: 8, bold: true, color: ESMERALDA })
-    texto(`US$ ${d.propuestaDia} por día`, M + 18, yd + 58, { size: 24, bold: true })
-    texto(
-      `A igual rendimiento que el testeo, equivale a unas ${Math.round(porDolar * d.propuestaDia)} empresas contactadas por día.`,
-      M + 18,
-      yd + 94,
-      { size: 9.5, color: SUAVE, width: W - 2 * M - 36 },
-    )
-  } else {
-    texto('PROPUESTA DE INVERSIÓN', M + 18, yd + 44, { size: 8, bold: true, color: ESMERALDA })
-    texto('Monto por acordar', M + 18, yd + 58, { size: 24, bold: true })
-  }
-  texto(
-    'El monto, el plazo y la forma de desembolso se acuerdan entre las partes, conforme al acuerdo vigente.',
-    M + 18,
-    yd + 120,
-    { size: 9, color: SUAVE, width: W - 2 * M - 36 },
-  )
-
-  caja(M, yd + 164, W - 2 * M, 44, 12, ESMERALDA)
-  texto('Ya tenemos marcado el camino: toca avanzar.', M + 18, yd + 179, {
-    size: 13,
-    bold: true,
-    color: '#ffffff',
-  })
-  texto('aiuda.ADS · un servicio de Aiuda Empresas', M, 800, { size: 8, color: SUAVE })
-  texto('3 / 3', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
-
+  paginasFinales(doc, h, d, TOTAL)
   doc.end()
   return listo
 }

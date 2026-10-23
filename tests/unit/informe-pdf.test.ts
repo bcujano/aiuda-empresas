@@ -1,16 +1,27 @@
 import { writeFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
+import { EXPLICACIONES, esquemaInforme, type Informe } from '@/lib/informe-modelo'
 import { informePdf } from '@/lib/informe-pdf'
-import type { Informe } from '@/server/informe'
+
+const persona = (nombre: string, empresa: string, fecha: string, nota: string) => ({
+  nombre,
+  empresa,
+  fecha,
+  nota,
+})
 
 const muestra: Informe = {
-  organizacion: { nombre: 'Cliente de ejemplo', color: '#1f3a5f' },
+  cliente: 'Cliente de ejemplo',
   desde: '2026-10-20',
   hasta: '2026-10-23',
+  inversion: 50,
   contactadas: 62,
   respondieron: 14,
   interesadas: 3,
   reuniones: 1,
+  automaticas: 9,
+  rechazos: 4,
+  bajas: 1,
   porDia: [
     { dia: '2026-10-20', n: 10 },
     { dia: '2026-10-21', n: 25 },
@@ -19,35 +30,47 @@ const muestra: Informe = {
   porSector: [
     { sector: 'inmobiliarias', n: 24, respondieron: 7, interesadas: 2 },
     { sector: 'concesionarias de vehículos', n: 20, respondieron: 4, interesadas: 1 },
-    { sector: 'compañías de seguros', n: 18, respondieron: 3, interesadas: 0 },
   ],
   foco: 'inmobiliarias',
-  inversion: 50,
-  propuestaDia: 15,
+  calientes: [persona('Ana Pérez', 'Inmobiliaria Uno', '22 oct', 'Quiere reunirse')],
+  tibios: [persona('Luis Mora', 'Autos Dos', '21 oct', 'Conversó (3 mensajes)')],
+  frios: [persona('Eva Rey', 'Seguros Tres', '21 oct', 'Ya tienen abogado')],
+  casoExito: {
+    activo: true,
+    titulo: 'Caso a verificar',
+    persona: persona('Ana Pérez', 'Inmobiliaria Uno', '22 oct', 'Verificar si la reunión ocurrió'),
+    texto: '«Ya conversé con un profesional y quedó en enviar información por correo»',
+  },
   charlas: [
     {
-      sector: 'inmobiliarias',
+      titulo: 'Ejemplo de conversación',
+      ilustrativa: true,
       mensajes: [
-        {
-          de: 'contacto',
-          texto: 'Ya conversé con un profesional y quedó en enviar información por correo',
-        },
+        { de: 'contacto', texto: 'Hola, ¿de qué se trata?' },
         {
           de: 'asistente',
-          texto:
-            'Entiendo. ¿Le gustaría coordinar una reunión breve de 20 minutos con uno de nuestros abogados?',
+          texto: 'Hola, le escribe el equipo. ¿Le interesaría una reunión breve de 20 minutos?',
         },
         { de: 'contacto', texto: 'Sí, el martes en la tarde' },
       ],
     },
   ],
+  dolares: { servicioMensual: 200, meses: 3, planMensualCliente: 500, propuestaDia: 15 },
+  conclusiones: ['Con US$ 50 se contactaron 62 empresas.', 'El testeo dejó marcado el camino.'],
+  pasos: ['Inyectar presupuesto por día.', 'Cumplir los 3 meses de prueba.'],
+  explicaciones: EXPLICACIONES,
 }
 
 describe('informe en PDF', () => {
-  it('genera un PDF válido de tres páginas', async () => {
+  it('el modelo de ejemplo es válido', () => {
+    expect(esquemaInforme.safeParse(muestra).success).toBe(true)
+    expect(esquemaInforme.safeParse({ ...muestra, contactadas: -1 }).success).toBe(false)
+  })
+
+  it('genera un PDF válido de cinco páginas', async () => {
     const pdf = await informePdf(muestra)
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
-    expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBe(3)
+    expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBe(5)
     if (process.env.GUARDAR_INFORME) writeFileSync(process.env.GUARDAR_INFORME, pdf)
   })
 })
