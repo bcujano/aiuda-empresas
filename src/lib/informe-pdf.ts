@@ -41,7 +41,11 @@ export function informePdf(d: Informe): Promise<Buffer> {
     .fillOpacity(1)
   texto('aiuda.', M, 40, { size: 15, bold: true, color: '#ffffff' })
   texto('ADS', M + 44, 40, { size: 15, bold: true, color: '#5ee0a7' })
-  texto('INFORME DE CAMPAÑAS', M, 105, { size: 10, bold: true, color: '#5ee0a7' })
+  texto(`INFORME DE CAMPAÑAS · ${d.canal.toUpperCase()}`, M, 105, {
+    size: 10,
+    bold: true,
+    color: '#5ee0a7',
+  })
   texto('Resultados de captación', M, 122, { size: 30, bold: true, color: '#ffffff' })
   texto(`${d.cliente}  ·  ${fechaCorta(d.desde)} al ${fechaCorta(d.hasta)}`, M, 160, {
     size: 12,

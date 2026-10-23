@@ -25,6 +25,7 @@ export type Charla = z.infer<typeof esquemaCharla>
 
 export const esquemaInforme = z.object({
   cliente: texto(80),
+  canal: texto(80),
   desde: texto(30),
   hasta: texto(30),
   inversion: numero,

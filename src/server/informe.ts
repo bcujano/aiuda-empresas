@@ -209,6 +209,7 @@ export async function armarInforme(
   const costo = contactados.length ? (inversion / contactados.length).toFixed(2) : '—'
   return {
     cliente: (o as { nombre: string } | null)?.nombre ?? '',
+    canal: 'Campaña de captación directa por WhatsApp',
     desde,
     hasta: hoy,
     inversion,

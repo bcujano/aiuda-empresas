@@ -89,6 +89,11 @@ export function EditorInforme({ inicial, claveLocal }: { inicial: Informe; clave
       <Bloque titulo="1 · Cifras del testeo">
         <div className="grid gap-3 sm:grid-cols-3">
           <Txt alCambiar={(v) => poner('cliente', v)} etiqueta="Cliente" valor={d.cliente} />
+          <Txt
+            alCambiar={(v) => poner('canal', v)}
+            etiqueta="Nombre de la campaña"
+            valor={d.canal}
+          />
           <Txt alCambiar={(v) => poner('desde', v)} etiqueta="Desde (AAAA-MM-DD)" valor={d.desde} />
           <Txt alCambiar={(v) => poner('hasta', v)} etiqueta="Hasta (AAAA-MM-DD)" valor={d.hasta} />
           <Num

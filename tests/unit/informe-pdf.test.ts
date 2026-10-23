@@ -12,6 +12,7 @@ const persona = (nombre: string, empresa: string, fecha: string, nota: string) =
 
 const muestra: Informe = {
   cliente: 'Cliente de ejemplo',
+  canal: 'Campaña de captación directa por WhatsApp',
   desde: '2026-10-20',
   hasta: '2026-10-23',
   inversion: 50,
