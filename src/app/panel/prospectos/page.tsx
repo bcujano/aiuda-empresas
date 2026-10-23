@@ -74,6 +74,11 @@ export default async function Prospectos({
         {permite(sesion, 'exportar') ? (
           <Descargas tipos={[{ tipo: 'prospectos', texto: 'Prospectos (Excel)' }]} />
         ) : null}
+        {permite(sesion, 'reportes') ? (
+          <a className="boton boton-primario" download href="/panel/informe">
+            Informe para el cliente (PDF)
+          </a>
+        ) : null}
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
