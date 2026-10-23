@@ -17,10 +17,13 @@ const muestra: Informe = {
     { dia: '2026-10-22', n: 27 },
   ],
   porSector: [
-    { sector: 'inmobiliarias', n: 24 },
-    { sector: 'concesionarias de vehículos', n: 20 },
-    { sector: 'compañías de seguros', n: 18 },
+    { sector: 'inmobiliarias', n: 24, respondieron: 7, interesadas: 2 },
+    { sector: 'concesionarias de vehículos', n: 20, respondieron: 4, interesadas: 1 },
+    { sector: 'compañías de seguros', n: 18, respondieron: 3, interesadas: 0 },
   ],
+  foco: 'inmobiliarias',
+  inversion: 50,
+  propuestaDia: 15,
   charlas: [
     {
       sector: 'inmobiliarias',
@@ -41,10 +44,10 @@ const muestra: Informe = {
 }
 
 describe('informe en PDF', () => {
-  it('genera un PDF válido de dos páginas', async () => {
+  it('genera un PDF válido de tres páginas', async () => {
     const pdf = await informePdf(muestra)
     expect(pdf.subarray(0, 5).toString()).toBe('%PDF-')
-    expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBe(2)
+    expect((pdf.toString('latin1').match(/\/Type \/Page\b/g) ?? []).length).toBe(3)
     if (process.env.GUARDAR_INFORME) writeFileSync(process.env.GUARDAR_INFORME, pdf)
   })
 })

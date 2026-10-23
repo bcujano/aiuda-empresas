@@ -62,7 +62,7 @@ export function informePdf(d: Informe): Promise<Buffer> {
 
   // ── Página 1: portada y cifras ─────────────────────────────
   doc.rect(0, 0, W, 842).fill('#fbf8f3')
-  doc.rect(0, 0, W, 215).fill(TINTA)
+  doc.rect(0, 0, W, 232).fill(TINTA)
   doc
     .circle(W - 40, 30, 150)
     .fillOpacity(0.07)
@@ -72,9 +72,14 @@ export function informePdf(d: Informe): Promise<Buffer> {
   texto('ADS', M + 44, 40, { size: 15, bold: true, color: '#5ee0a7' })
   texto('INFORME DE CAMPAÑAS', M, 105, { size: 10, bold: true, color: '#5ee0a7' })
   texto('Resultados de captación', M, 122, { size: 30, bold: true, color: '#ffffff' })
-  texto(`${d.organizacion.nombre}  ·  ${fechaCorta(d.desde)} al ${fechaCorta(d.hasta)}`, M, 168, {
+  texto(`${d.organizacion.nombre}  ·  ${fechaCorta(d.desde)} al ${fechaCorta(d.hasta)}`, M, 160, {
     size: 12,
     color: '#c9d3e3',
+  })
+  texto(`Resultados del testeo con la inversión inicial de US$ ${d.inversion}`, M, 180, {
+    size: 11,
+    bold: true,
+    color: '#5ee0a7',
   })
 
   const kpis: [string, string, string][] = [
@@ -86,9 +91,9 @@ export function informePdf(d: Informe): Promise<Buffer> {
   const kw = (W - 2 * M - 3 * 12) / 4
   kpis.forEach(([v, l, c], i) => {
     const x = M + i * (kw + 12)
-    caja(x, 190, kw, 86, 12, '#ffffff', LINEA)
-    texto(v, x + 14, 206, { size: 30, bold: true, color: c })
-    texto(l, x + 14, 248, { size: 8.5, color: SUAVE, width: kw - 24 })
+    caja(x, 208, kw, 86, 12, '#ffffff', LINEA)
+    texto(v, x + 14, 224, { size: 30, bold: true, color: c })
+    texto(l, x + 14, 266, { size: 8.5, color: SUAVE, width: kw - 24 })
   })
 
   titulo('Embudo de la campaña', 304)
@@ -146,7 +151,7 @@ export function informePdf(d: Informe): Promise<Buffer> {
     })
   })
   texto('aiuda.ADS · un servicio de Aiuda Empresas', M, 800, { size: 8, color: SUAVE })
-  texto('1 / 2', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
+  texto('1 / 3', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
 
   // ── Página 2: sectores y conversaciones ────────────────────
   doc.addPage({ size: 'A4', margin: 0 })
@@ -163,7 +168,7 @@ export function informePdf(d: Informe): Promise<Buffer> {
     const sw = W - 2 * M - 210
     caja(M + 160, y, sw, 16, 5, ARENA)
     caja(M + 160, y, Math.max(6, (s.n / maxS) * sw), 16, 5, i === 0 ? ESMERALDA : TINTA)
-    texto(`${s.n}  (${pct(s.n, d.contactadas)})`, M + 160 + sw + 8, y + 4, {
+    texto(`${s.n} · ${s.respondieron} resp.`, M + 160 + sw + 8, y + 4, {
       size: 8.5,
       bold: true,
     })
@@ -227,7 +232,81 @@ export function informePdf(d: Informe): Promise<Buffer> {
     { size: 9, color: SUAVE, width: W - 2 * M - 10 },
   )
   texto('aiuda.ADS · un servicio de Aiuda Empresas', M, 800, { size: 8, color: SUAVE })
-  texto('2 / 2', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
+  texto('2 / 3', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
+
+  // ── Página 3: conclusiones y siguiente paso ────────────────
+  doc.addPage({ size: 'A4', margin: 0 })
+  doc.rect(0, 0, W, 842).fill('#fbf8f3')
+  texto('aiuda.', M, 28, { size: 11, bold: true })
+  texto('ADS', M + 36, 28, { size: 11, bold: true, color: ESMERALDA })
+  titulo('Conclusiones del testeo', 60)
+  const costo = d.contactadas ? (d.inversion / d.contactadas).toFixed(2) : '—'
+  const sFoco = d.porSector.find((x) => x.sector === d.foco)
+  const conclusiones = [
+    `Con la inversión inicial de US$ ${d.inversion} se contactaron ${d.contactadas} empresas (alrededor de US$ ${costo} por empresa).`,
+    `${d.respondieron} respondieron (${pct(d.respondieron, d.contactadas)}), ${d.interesadas} mostraron interés en reunirse y hay ${d.reuniones} reunión(es) agendada(s).`,
+    sFoco
+      ? `El sector con mejor respuesta es ${sFoco.sector}: ${sFoco.respondieron} de ${sFoco.n} empresas respondieron.`
+      : 'Aún no hay respuestas suficientes por sector para elegir un foco con datos; la siguiente tanda lo definirá.',
+    'El presupuesto de arranque limitó el volumen diario y por eso el avance fue más lento de lo ideal. El testeo cumplió su objetivo: dejó marcado el camino.',
+  ]
+  let yc = 92
+  for (const c of conclusiones) {
+    doc.circle(M + 4, yc + 6, 3).fill(ESMERALDA)
+    doc.font('Helvetica').fontSize(10)
+    const h = doc.heightOfString(c, { width: W - 2 * M - 20 })
+    texto(c, M + 16, yc, { size: 10, width: W - 2 * M - 20 })
+    yc += h + 12
+  }
+
+  titulo('Segmento a atacar', yc + 14)
+  caja(M, yc + 42, W - 2 * M, 74, 14, TINTA)
+  texto(d.foco ? 'FOCO DE LA SIGUIENTE ETAPA' : 'FOCO POR DEFINIR', M + 18, yc + 56, {
+    size: 8,
+    bold: true,
+    color: '#5ee0a7',
+  })
+  texto(
+    d.foco
+      ? d.foco.charAt(0).toUpperCase() + d.foco.slice(1)
+      : 'Se define con la siguiente tanda de datos',
+    M + 18,
+    yc + 72,
+    { size: 18, bold: true, color: '#ffffff', width: W - 2 * M - 36 },
+  )
+
+  const yd = yc + 144
+  titulo('Siguiente desembolso', yd)
+  caja(M, yd + 28, W - 2 * M, 118, 14, '#ffffff', LINEA)
+  if (d.propuestaDia) {
+    const porDolar = d.contactadas / Math.max(1, d.inversion)
+    texto('PROPUESTA DE INVERSIÓN', M + 18, yd + 44, { size: 8, bold: true, color: ESMERALDA })
+    texto(`US$ ${d.propuestaDia} por día`, M + 18, yd + 58, { size: 24, bold: true })
+    texto(
+      `A igual rendimiento que el testeo, equivale a unas ${Math.round(porDolar * d.propuestaDia)} empresas contactadas por día.`,
+      M + 18,
+      yd + 94,
+      { size: 9.5, color: SUAVE, width: W - 2 * M - 36 },
+    )
+  } else {
+    texto('PROPUESTA DE INVERSIÓN', M + 18, yd + 44, { size: 8, bold: true, color: ESMERALDA })
+    texto('Monto por acordar', M + 18, yd + 58, { size: 24, bold: true })
+  }
+  texto(
+    'El monto, el plazo y la forma de desembolso se acuerdan entre las partes, conforme al acuerdo vigente.',
+    M + 18,
+    yd + 120,
+    { size: 9, color: SUAVE, width: W - 2 * M - 36 },
+  )
+
+  caja(M, yd + 164, W - 2 * M, 44, 12, ESMERALDA)
+  texto('Ya tenemos marcado el camino: toca avanzar.', M + 18, yd + 179, {
+    size: 13,
+    bold: true,
+    color: '#ffffff',
+  })
+  texto('aiuda.ADS · un servicio de Aiuda Empresas', M, 800, { size: 8, color: SUAVE })
+  texto('3 / 3', W - M - 40, 800, { size: 8, color: SUAVE, width: 40, align: 'right' })
 
   doc.end()
   return listo

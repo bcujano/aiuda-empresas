@@ -18,7 +18,11 @@ export type Informe = {
   interesadas: number
   reuniones: number
   porDia: { dia: string; n: number }[]
-  porSector: { sector: string; n: number }[]
+  porSector: { sector: string; n: number; respondieron: number; interesadas: number }[]
+  /** Sector con mejor respuesta real (null mientras no haya datos para elegir). */
+  foco: string | null
+  inversion: number
+  propuestaDia: number | null
   charlas: Charla[]
 }
 
@@ -44,7 +48,10 @@ function limpiar(texto: string, empresas: string[]): string {
   return t.replace(/\s+/g, ' ').trim().slice(0, 220)
 }
 
-export async function armarInforme(orgId: string): Promise<Informe> {
+export async function armarInforme(
+  orgId: string,
+  opciones: { inversion?: number; propuestaDia?: number | null } = {},
+): Promise<Informe> {
   const db = supabaseAdmin()
   const [{ data: o }, { data: p }, { data: l }, { count: reuniones }] = await Promise.all([
     db.from('organizaciones').select('nombre, color_primario').eq('id', orgId).single(),
@@ -86,9 +93,23 @@ export async function armarInforme(orgId: string): Promise<Informe> {
     const d = dia((x.whatsapp_at ?? x.email_at) as string)
     porDia.set(d, (porDia.get(d) ?? 0) + 1)
   }
-  const porSector = new Map<string, number>()
-  for (const x of contactados)
-    porSector.set(x.segmento ?? 'Otros', (porSector.get(x.segmento ?? 'Otros') ?? 0) + 1)
+  const sectores = new Map<string, { n: number; respondieron: number; interesadas: number }>()
+  for (const x of contactados) {
+    const k = x.segmento ?? 'Otros'
+    const t = sectores.get(k) ?? { n: 0, respondieron: 0, interesadas: 0 }
+    t.n++
+    if (respondieron.includes(x)) t.respondieron++
+    if (interesadas.includes(x)) t.interesadas++
+    sectores.set(k, t)
+  }
+  const porSector = [...sectores].map(([sector, t]) => ({ sector, ...t })).sort((a, b) => b.n - a.n)
+  // Foco: más interesadas; si empatan, mejor tasa de respuesta; hace falta una muestra mínima.
+  const foco =
+    [...porSector]
+      .filter((s) => s.n >= 5 && (s.interesadas > 0 || s.respondieron > 0))
+      .sort(
+        (a, b) => b.interesadas - a.interesadas || b.respondieron / b.n - a.respondieron / a.n,
+      )[0]?.sector ?? null
 
   // Charlas destacadas: primero las de quien mostró interés.
   const elegidas = interesadas
@@ -125,7 +146,10 @@ export async function armarInforme(orgId: string): Promise<Informe> {
     interesadas: interesadas.length,
     reuniones: reuniones ?? 0,
     porDia: [...porDia].sort().map(([d, n]) => ({ dia: d, n })),
-    porSector: [...porSector].sort((a, b) => b[1] - a[1]).map(([sector, n]) => ({ sector, n })),
+    porSector,
+    foco,
+    inversion: opciones.inversion ?? 50,
+    propuestaDia: opciones.propuestaDia ?? null,
     charlas,
   }
 }

@@ -75,9 +75,31 @@ export default async function Prospectos({
           <Descargas tipos={[{ tipo: 'prospectos', texto: 'Prospectos (Excel)' }]} />
         ) : null}
         {permite(sesion, 'reportes') ? (
-          <a className="boton boton-primario" download href="/panel/informe">
-            Informe para el cliente (PDF)
-          </a>
+          <form action="/panel/informe" className="flex flex-wrap items-end gap-2" method="get">
+            <label className="flex flex-col gap-1 text-xs">
+              Inversión del testeo (US$)
+              <input
+                className="campo w-28"
+                defaultValue={50}
+                min={1}
+                name="inversion"
+                type="number"
+              />
+            </label>
+            <label className="flex flex-col gap-1 text-xs">
+              Propuesta (US$ por día)
+              <input
+                className="campo w-28"
+                min={1}
+                name="propuesta"
+                placeholder="a acordar"
+                type="number"
+              />
+            </label>
+            <button className="boton boton-primario" type="submit">
+              Informe para el cliente (PDF)
+            </button>
+          </form>
         ) : null}
       </div>
 
