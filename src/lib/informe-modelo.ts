@@ -25,7 +25,7 @@ export type Charla = z.infer<typeof esquemaCharla>
 
 export const esquemaInforme = z.object({
   cliente: texto(80),
-  canal: texto(80),
+  canal: texto(80).default('Campaña de captación directa por WhatsApp'),
   desde: texto(30),
   hasta: texto(30),
   inversion: numero,
@@ -36,8 +36,8 @@ export const esquemaInforme = z.object({
   automaticas: numero,
   rechazos: numero,
   bajas: numero,
-  porDia: z.array(z.object({ dia: texto(10), n: numero, resp: numero })).max(31),
-  ventanaDias: numero,
+  porDia: z.array(z.object({ dia: texto(10), n: numero, resp: numero.default(0) })).max(31),
+  ventanaDias: numero.default(14),
   porSector: z
     .array(z.object({ sector: texto(60), n: numero, respondieron: numero, interesadas: numero }))
     .max(10),

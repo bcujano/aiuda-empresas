@@ -19,7 +19,7 @@ export async function POST(peticion: Request) {
   const analisis = esquemaInforme.safeParse(json)
   if (!analisis.success) {
     return new Response(
-      `Revisa el informe: ${analisis.error.issues[0]?.message ?? 'datos inválidos'}.`,
+      `Revisa el informe: ${analisis.error.issues[0]?.path.join('.') ?? ''} ${analisis.error.issues[0]?.message ?? 'datos inválidos'}.`,
       { status: 400 },
     )
   }

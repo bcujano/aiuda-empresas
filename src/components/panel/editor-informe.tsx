@@ -35,7 +35,7 @@ export function EditorInforme({ inicial, claveLocal }: { inicial: Informe; clave
   useEffect(() => {
     try {
       const guardado = localStorage.getItem(claveLocal)
-      if (guardado) setD(JSON.parse(guardado) as Informe)
+      if (guardado) setD((actual) => ({ ...actual, ...(JSON.parse(guardado) as Partial<Informe>) }))
     } catch {}
     setRestaurado(true)
   }, [claveLocal])
