@@ -78,6 +78,24 @@ export function EditorInforme({
           >
             <RotateCcw size={14} /> Volver a las cifras reales
           </button>
+          <button
+            className="boton boton-suave"
+            onClick={() => {
+              try {
+                localStorage.removeItem(claveLocal)
+              } catch {}
+              const q = new URLSearchParams({
+                desde: d.desde,
+                hasta: d.hasta,
+                inversion: String(d.inversion),
+                propuesta: String(d.dolares.propuestaDia),
+              })
+              window.location.href = `/panel/informe?${q}`
+            }}
+            type="button"
+          >
+            <RotateCcw size={14} /> Recalcular con estas fechas
+          </button>
           <form action="/panel/informe/pdf" method="post" target="_blank" rel="noopener">
             <input name="datos" type="hidden" value={JSON.stringify(d)} />
             <button className="boton boton-primario" type="submit">

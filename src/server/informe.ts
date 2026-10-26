@@ -73,10 +73,10 @@ export const CHARLA_ILUSTRATIVA: Charla = {
 
 export async function armarInforme(
   orgId: string,
-  opciones: { inversion?: number; propuestaDia?: number } = {},
+  opciones: { inversion?: number; propuestaDia?: number; desde?: string; hasta?: string } = {},
 ): Promise<Informe> {
   const db = supabaseAdmin()
-  const [{ data: o }, { data: p }, { data: l }, { data: a }, { count: reuniones }] =
+  const [{ data: o }, { data: p }, { data: l }, { data: a }, { data: citasFilas }] =
     await Promise.all([
       db.from('organizaciones').select('nombre').eq('id', orgId).single(),
       db
@@ -98,9 +98,10 @@ export async function armarInforme(
         .limit(8000),
       db
         .from('citas')
-        .select('id', { count: 'exact', head: true })
+        .select('id, created_at')
         .eq('organizacion_id', orgId)
-        .in('estado', ['agendada', 'confirmada', 'asistio']),
+        .in('estado', ['agendada', 'confirmada', 'asistio'])
+        .limit(2000),
     ])
   const prospectos = (p ?? []) as Pros[]
   const leads = (l ?? []) as LeadFila[]
@@ -110,14 +111,28 @@ export async function armarInforme(
   const delLead = new Map<string, Msg[]>()
   for (const m of msgs) delLead.set(m.lead_id, [...(delLead.get(m.lead_id) ?? []), m])
 
-  // Ventana del informe: los últimos 14 días (hoy incluido), hora de Quito.
-  const VENTANA = 14
+  // Ventana del informe: por defecto los últimos 14 días (hoy incluido); si se piden fechas, esas. Hora de Quito.
+  const esDia = (v?: string) => !!v && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v))
+  const MS_DIA = 86_400_000
   const ahora = Date.now()
-  const hoy = diaIso(new Date(ahora).toISOString())
-  const inicio = diaIso(new Date(ahora - (VENTANA - 1) * 86_400_000).toISOString())
+  const hoyReal = diaIso(new Date(ahora).toISOString())
+  const hoy = esDia(opciones.hasta) ? (opciones.hasta as string) : hoyReal
+  let inicio = esDia(opciones.desde)
+    ? (opciones.desde as string)
+    : diaIso(new Date(Date.parse(hoy) - 13 * MS_DIA).toISOString())
+  if (inicio > hoy) inicio = hoy
+  const VENTANA = Math.min(60, Math.round((Date.parse(hoy) - Date.parse(inicio)) / MS_DIA) + 1)
+  const dias = Array.from({ length: VENTANA }, (_, i) =>
+    new Date(Date.parse(hoy) - (VENTANA - 1 - i) * MS_DIA).toISOString().slice(0, 10),
+  )
+  inicio = dias[0] as string
+  const reuniones = ((citasFilas ?? []) as { created_at: string }[]).filter((c) => {
+    const d = diaIso(c.created_at)
+    return d >= inicio && d <= hoy
+  }).length
   const diaContacto = (x: Pros) => diaIso((x.whatsapp_at ?? x.email_at) as string)
   const contactados = prospectos.filter(
-    (x) => (x.whatsapp_at || x.email_at) && diaContacto(x) >= inicio,
+    (x) => (x.whatsapp_at || x.email_at) && diaContacto(x) >= inicio && diaContacto(x) <= hoy,
   )
   const reales = contactados.filter(
     (x) => x.respondio_at && !esBot(porTel.get(digitos(x.telefono_wa))),
@@ -127,7 +142,14 @@ export async function armarInforme(
     INTERESADAS.includes(porTel.get(digitos(x.telefono_wa))?.etapa ?? ''),
   )
 
-  const conversaron = leads.filter((x) => empresaDe.has(digitos(x.telefono)) && !esBot(x))
+  const activoEnVentana = (x: LeadFila) =>
+    (delLead.get(x.id) ?? []).some((m) => {
+      const d = diaIso(m.created_at)
+      return d >= inicio && d <= hoy
+    })
+  const conversaron = leads.filter(
+    (x) => empresaDe.has(digitos(x.telefono)) && !esBot(x) && activoEnVentana(x),
+  )
   const persona = (x: LeadFila, nota: string): Persona => {
     const ult = [...(delLead.get(x.id) ?? [])].reverse().find((m) => m.tipo === 'mensaje_entrante')
     return {
@@ -149,9 +171,7 @@ export async function armarInforme(
   const bajas = contactados.filter((x) => x.baja_at).length - automaticas
 
   const porDia = new Map<string, { n: number; resp: number }>()
-  for (let i = VENTANA - 1; i >= 0; i--) {
-    porDia.set(diaIso(new Date(ahora - i * 86_400_000).toISOString()), { n: 0, resp: 0 })
-  }
+  for (const dia of dias) porDia.set(dia, { n: 0, resp: 0 })
   for (const x of contactados) {
     const t = porDia.get(diaContacto(x))
     if (!t) continue
@@ -204,7 +224,7 @@ export async function armarInforme(
   if (charlas.length < 2) charlas.push(CHARLA_ILUSTRATIVA)
 
   const inversion = opciones.inversion ?? 50
-  const desde = [...porDia.keys()].sort()[0] ?? inicio
+  const desde = inicio
   const sFoco = porSector.find((s) => s.sector === foco)
   const costo = contactados.length ? (inversion / contactados.length).toFixed(2) : '—'
   return {
@@ -216,7 +236,7 @@ export async function armarInforme(
     contactadas: contactados.length,
     respondieron: reales.length,
     interesadas: interesadas.length,
-    reuniones: reuniones ?? 0,
+    reuniones,
     automaticas,
     rechazos,
     bajas: Math.max(0, bajas),
@@ -249,7 +269,7 @@ export async function armarInforme(
     },
     conclusiones: [
       `Con la inversión inicial de US$ ${inversion} se contactaron ${contactados.length} empresas (alrededor de US$ ${costo} por empresa).`,
-      `${reales.length} respondieron como personas, ${interesadas.length} mostraron interés en reunirse y hay ${reuniones ?? 0} reunión(es) agendada(s).`,
+      `${reales.length} respondieron como personas, ${interesadas.length} mostraron interés en reunirse y hay ${reuniones} reunión(es) agendada(s).`,
       sFoco
         ? `El sector con mejor respuesta es ${sFoco.sector}: ${sFoco.respondieron} de ${sFoco.n} respondieron.`
         : 'Aún no hay respuestas suficientes por sector para elegir un foco con datos.',

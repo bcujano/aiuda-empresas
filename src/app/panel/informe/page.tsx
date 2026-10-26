@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic'
 export default async function Informe({
   searchParams,
 }: {
-  searchParams: Promise<{ inversion?: string; propuesta?: string }>
+  searchParams: Promise<{ inversion?: string; propuesta?: string; desde?: string; hasta?: string }>
 }) {
   const sesion = await exigir('reportes')
   if (!sesion) redirect('/panel')
@@ -20,6 +20,8 @@ export default async function Informe({
   const borrador = await armarInforme(sesion.org.id, {
     inversion: num(q.inversion),
     propuestaDia: num(q.propuesta),
+    desde: q.desde,
+    hasta: q.hasta,
   })
   const [pendiente, org] = await Promise.all([
     informePendiente(sesion.org.id),
