@@ -3,7 +3,7 @@
 import { FileText, RotateCcw } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import type { Informe } from '@/lib/informe-modelo'
-import { CHARLA_NUEVA } from './editor-informe-datos'
+import { CHARLA_NUEVA, enlaceRecalcular } from './editor-informe-datos'
 import { BloquesFinales } from './editor-informe-finales'
 import {
   Bloque,
@@ -84,13 +84,7 @@ export function EditorInforme({
               try {
                 localStorage.removeItem(claveLocal)
               } catch {}
-              const q = new URLSearchParams({
-                desde: d.desde,
-                hasta: d.hasta,
-                inversion: String(d.inversion),
-                propuesta: String(d.dolares.propuestaDia),
-              })
-              window.location.href = `/panel/informe?${q}`
+              window.location.href = enlaceRecalcular(d)
             }}
             type="button"
           >
