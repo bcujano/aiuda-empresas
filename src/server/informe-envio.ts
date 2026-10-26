@@ -6,7 +6,19 @@ import { supabaseAdmin } from '@/lib/supabase/admin'
 /** Informes revisados y programados para salir por correo con el PDF adjunto. */
 
 export const esquemaProgramacion = z.object({
-  destino: z.string().trim().toLowerCase().email('El correo de destino no es válido'),
+  destino: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .refine(
+      (v) => v === '' || z.string().email().safeParse(v).success,
+      'El correo de destino no es válido',
+    ),
+  whatsapp: z
+    .string()
+    .trim()
+    .transform((v) => v.replace(/\D/g, ''))
+    .refine((v) => v.length >= 10 && v.length <= 15, 'El número de WhatsApp no es válido'),
   asunto: z.string().trim().min(5, 'Escribe el asunto').max(160),
   enviar_at: z.string().datetime({ offset: true }),
 })
@@ -26,20 +38,28 @@ export async function programarInforme(
 export async function informePendiente(orgId: string) {
   const { data } = await supabaseAdmin()
     .from('informes_envio')
-    .select('id, destino, asunto, enviar_at')
+    .select('id, destino, whatsapp, asunto, enviar_at')
     .eq('organizacion_id', orgId)
     .is('enviado_at', null)
     .order('enviar_at')
     .limit(1)
     .maybeSingle()
-  return (data as { id: string; destino: string; asunto: string; enviar_at: string } | null) ?? null
+  return (
+    (data as {
+      id: string
+      destino: string
+      whatsapp: string
+      asunto: string
+      enviar_at: string
+    } | null) ?? null
+  )
 }
 
 /** Lo que n8n pide cada pocos minutos: el informe que ya toca enviar, con su PDF en base64. */
 export async function informesPorEnviar(ahora: Date = new Date()): Promise<unknown[]> {
   const { data } = await supabaseAdmin()
     .from('informes_envio')
-    .select('id, organizacion_id, datos, destino, asunto')
+    .select('id, organizacion_id, datos, destino, whatsapp, asunto')
     .is('enviado_at', null)
     .lte('enviar_at', ahora.toISOString())
     .order('enviar_at')
@@ -50,6 +70,7 @@ export async function informesPorEnviar(ahora: Date = new Date()): Promise<unkno
     organizacion_id: string
     datos: unknown
     destino: string
+    whatsapp: string
     asunto: string
   }[]) {
     const analisis = esquemaInforme.safeParse(f.datos)
@@ -61,22 +82,21 @@ export async function informesPorEnviar(ahora: Date = new Date()): Promise<unkno
       continue
     }
     const pdf = await informePdf(analisis.data)
-    // También por WhatsApp (plantilla con botón al informe), solo si el cliente tiene número de aviso.
+    // Por WhatsApp (plantilla con botón al informe); el correo con el PDF es opcional.
     const { data: o } = await supabaseAdmin()
       .from('organizaciones')
-      .select('aviso_whatsapp, wa_phone_number_id, prefijo_plantillas')
+      .select('wa_phone_number_id, prefijo_plantillas')
       .eq('id', f.organizacion_id)
       .single()
     const org = o as {
-      aviso_whatsapp: string | null
       wa_phone_number_id: string | null
       prefijo_plantillas: string | null
     } | null
     const whatsapp =
-      org?.aviso_whatsapp && org.wa_phone_number_id
+      f.whatsapp && org?.wa_phone_number_id
         ? {
             phone_number_id: org.wa_phone_number_id,
-            to: org.aviso_whatsapp.replace(/\D/g, ''),
+            to: f.whatsapp,
             plantilla: `${org.prefijo_plantillas ?? ''}informe_cliente`,
             parametros: [analisis.data.cliente],
             boton: f.id,

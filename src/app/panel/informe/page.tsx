@@ -28,7 +28,7 @@ export default async function Informe({
   return (
     <EditorInforme
       claveLocal={`informe-${sesion.org.id}`}
-      correoInicial={org?.aviso_email ?? ''}
+      whatsappInicial={org?.aviso_whatsapp ?? ''}
       inicial={borrador}
       pendiente={pendiente}
     />

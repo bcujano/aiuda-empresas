@@ -24,13 +24,13 @@ import { ProgramarInforme } from './programar-informe'
 export function EditorInforme({
   inicial,
   claveLocal,
-  correoInicial,
+  whatsappInicial,
   pendiente,
 }: {
   inicial: Informe
   claveLocal: string
-  correoInicial: string
-  pendiente: { destino: string; enviar_at: string } | null
+  whatsappInicial: string
+  pendiente: { whatsapp: string; enviar_at: string } | null
 }) {
   const [d, setD] = useState<Informe>(inicial)
   const [restaurado, setRestaurado] = useState(false)
@@ -280,7 +280,7 @@ export function EditorInforme({
 
       <BloquesFinales d={d} exp={exp} poner={poner} />
 
-      <ProgramarInforme correoInicial={correoInicial} informe={d} pendiente={pendiente} />
+      <ProgramarInforme whatsappInicial={whatsappInicial} informe={d} pendiente={pendiente} />
     </div>
   )
 }

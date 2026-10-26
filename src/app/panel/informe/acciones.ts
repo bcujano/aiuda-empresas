@@ -9,6 +9,7 @@ import { esquemaProgramacion, programarInforme } from '@/server/informe-envio'
 export async function programarInformeAccion(
   datos: string,
   destino: string,
+  whatsapp: string,
   asunto: string,
   enviarLocal: string,
 ): Promise<Resultado> {
@@ -28,13 +29,18 @@ export async function programarInformeAccion(
   // La hora se escribe en hora de Quito (UTC-5, sin cambio de hora).
   const hora = new Date(`${enviarLocal}:00-05:00`)
   if (Number.isNaN(hora.getTime())) return { error: 'La fecha y hora de envío no son válidas.' }
-  const p = esquemaProgramacion.safeParse({ destino, asunto, enviar_at: hora.toISOString() })
+  const p = esquemaProgramacion.safeParse({
+    destino,
+    whatsapp,
+    asunto,
+    enviar_at: hora.toISOString(),
+  })
   if (!p.success) return { error: p.error.issues[0]?.message ?? 'Revisa los datos de envío.' }
   if (!(await programarInforme(sesion.org.id, informe.data, p.data))) {
     return { error: 'No se pudo guardar. ¿Corriste el SQL de informes_envio?' }
   }
   return {
     ok: true,
-    aviso: `Informe guardado. Saldrá a ${p.data.destino} el ${enviarLocal.replace('T', ' a las ')} (hora de Quito).`,
+    aviso: `Informe guardado. Saldrá por WhatsApp a +${p.data.whatsapp} el ${enviarLocal.replace('T', ' a las ')} (hora de Quito).`,
   }
 }

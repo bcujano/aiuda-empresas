@@ -15,28 +15,30 @@ function mananaSieteQuito(): string {
 
 export function ProgramarInforme({
   informe,
-  correoInicial,
+  whatsappInicial,
   pendiente,
 }: {
   informe: Informe
-  correoInicial: string
-  pendiente: { destino: string; enviar_at: string } | null
+  whatsappInicial: string
+  pendiente: { whatsapp: string; enviar_at: string } | null
 }) {
-  const [destino, setDestino] = useState(correoInicial)
+  const [whatsapp, setWhatsapp] = useState(whatsappInicial)
+  const [destino, setDestino] = useState('')
   const [asunto, setAsunto] = useState(`Informe de campañas · ${informe.cliente}`)
   const [cuando, setCuando] = useState(mananaSieteQuito())
   const [estado, setEstado] = useState<Resultado>({})
   const [pendienteAccion, iniciar] = useTransition()
   return (
     <section className="tarjeta flex flex-col gap-3 p-4">
-      <h2 className="font-semibold text-base">8 · Enviar por correo con el PDF adjunto</h2>
+      <h2 className="font-semibold text-base">8 · Enviar por WhatsApp</h2>
       <p className="text-[var(--texto-suave)] text-sm">
-        Guarda el informe tal como está ahora y sale solo a la hora indicada, desde el correo de
-        Aiuda. Un solo informe queda programado: el nuevo reemplaza al anterior.
+        Guarda el informe tal como está ahora y sale solo a la hora indicada: el cliente recibe un
+        mensaje de WhatsApp con un botón para ver y descargar el PDF. Un solo informe queda
+        programado: el nuevo reemplaza al anterior.
       </p>
       {pendiente ? (
         <p className="rounded-lg bg-[var(--aviso-suave)] p-2 text-[var(--aviso)] text-sm">
-          Ya hay uno programado para {pendiente.destino} el{' '}
+          Ya hay uno programado para +{pendiente.whatsapp} el{' '}
           {new Date(pendiente.enviar_at).toLocaleString('es-EC', {
             timeZone: 'America/Guayaquil',
             dateStyle: 'medium',
@@ -45,9 +47,19 @@ export function ProgramarInforme({
           .
         </p>
       ) : null}
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="flex flex-col gap-1 text-xs">
-          <label htmlFor="inf-destino">Correo de destino</label>
+          <label htmlFor="inf-whatsapp">WhatsApp del cliente (con código de país)</label>
+          <input
+            className="campo"
+            id="inf-whatsapp"
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="593990000000"
+            value={whatsapp}
+          />
+        </div>
+        <div className="flex flex-col gap-1 text-xs">
+          <label htmlFor="inf-destino">Correo (opcional, con PDF adjunto)</label>
           <input
             className="campo"
             id="inf-destino"
@@ -83,7 +95,13 @@ export function ProgramarInforme({
           onClick={() =>
             iniciar(async () =>
               setEstado(
-                await programarInformeAccion(JSON.stringify(informe), destino, asunto, cuando),
+                await programarInformeAccion(
+                  JSON.stringify(informe),
+                  destino,
+                  whatsapp,
+                  asunto,
+                  cuando,
+                ),
               ),
             )
           }
