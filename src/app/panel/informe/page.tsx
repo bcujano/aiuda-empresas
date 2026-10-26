@@ -27,11 +27,13 @@ export default async function Informe({
     informePendiente(sesion.org.id),
     organizacionPorId(sesion.org.id),
   ])
+  // Si hay un envío programado (y no se pidió recalcular), el editor abre ESE informe.
+  const inicial = pendiente?.datos && !q.desde ? pendiente.datos : borrador
   return (
     <EditorInforme
       claveLocal={`informe-${sesion.org.id}`}
       whatsappInicial={org?.aviso_whatsapp ?? ''}
-      inicial={borrador}
+      inicial={inicial}
       pendiente={pendiente}
     />
   )

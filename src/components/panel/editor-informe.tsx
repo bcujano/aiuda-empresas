@@ -14,7 +14,7 @@ import {
   Num,
   Txt,
 } from './editor-informe-piezas'
-import { ProgramarInforme } from './programar-informe'
+import { type PendienteInforme, ProgramarInforme } from './programar-informe'
 
 /**
  * Editor del informe del cliente. Todo parte de las cifras reales; cada número y texto se puede ajustar
@@ -30,7 +30,7 @@ export function EditorInforme({
   inicial: Informe
   claveLocal: string
   whatsappInicial: string
-  pendiente: { whatsapp: string; enviar_at: string } | null
+  pendiente: PendienteInforme | null
 }) {
   const [d, setD] = useState<Informe>(inicial)
   const [restaurado, setRestaurado] = useState(false)
@@ -38,10 +38,11 @@ export function EditorInforme({
   useEffect(() => {
     try {
       const guardado = localStorage.getItem(claveLocal)
-      if (guardado) setD((actual) => ({ ...actual, ...(JSON.parse(guardado) as Partial<Informe>) }))
+      if (guardado && !(pendiente?.datos && !location.search))
+        setD((actual) => ({ ...actual, ...(JSON.parse(guardado) as Partial<Informe>) }))
     } catch {}
     setRestaurado(true)
-  }, [claveLocal])
+  }, [claveLocal, pendiente])
   useEffect(() => {
     if (!restaurado) return
     try {

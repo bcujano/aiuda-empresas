@@ -1,11 +1,22 @@
 'use client'
 
-import { Send } from 'lucide-react'
+import { Send, X } from 'lucide-react'
 import { useState, useTransition } from 'react'
 import type { Resultado } from '@/app/panel/acciones'
-import { programarInformeAccion } from '@/app/panel/informe/acciones'
+import { cancelarInformeAccion, programarInformeAccion } from '@/app/panel/informe/acciones'
 import { Aviso } from '@/components/ui/primitivos'
 import type { Informe } from '@/lib/informe-modelo'
+
+export type PendienteInforme = {
+  whatsapp: string
+  destino: string
+  asunto: string
+  enviar_at: string
+  datos: Informe | null
+}
+
+/** Un instante, en hora de Quito y en el formato del campo de fecha. */
+const aQuito = (iso: string) => new Date(Date.parse(iso) - 5 * 3_600_000).toISOString().slice(0, 16)
 
 /** «Mañana a las 7:00» en hora de Quito, en el formato del campo de fecha. */
 function mananaSieteQuito(): string {
@@ -20,12 +31,14 @@ export function ProgramarInforme({
 }: {
   informe: Informe
   whatsappInicial: string
-  pendiente: { whatsapp: string; enviar_at: string } | null
+  pendiente: PendienteInforme | null
 }) {
-  const [whatsapp, setWhatsapp] = useState(whatsappInicial)
-  const [destino, setDestino] = useState('')
-  const [asunto, setAsunto] = useState(`Informe de campañas · ${informe.cliente}`)
-  const [cuando, setCuando] = useState(mananaSieteQuito())
+  const [whatsapp, setWhatsapp] = useState(pendiente?.whatsapp || whatsappInicial)
+  const [destino, setDestino] = useState(pendiente?.destino ?? '')
+  const [asunto, setAsunto] = useState(
+    pendiente?.asunto ?? `Informe de campañas · ${informe.cliente}`,
+  )
+  const [cuando, setCuando] = useState(pendiente ? aQuito(pendiente.enviar_at) : mananaSieteQuito())
   const [estado, setEstado] = useState<Resultado>({})
   const [pendienteAccion, iniciar] = useTransition()
   return (
@@ -109,6 +122,24 @@ export function ProgramarInforme({
         >
           <Send size={14} /> Guardar y programar envío
         </button>
+        {pendiente ? (
+          <button
+            className="boton boton-suave"
+            disabled={pendienteAccion}
+            onClick={() => {
+              if (!window.confirm('¿Cancelar el envío programado? No saldrá ningún informe.'))
+                return
+              iniciar(async () => {
+                const r = await cancelarInformeAccion()
+                setEstado(r)
+                if (r.ok) window.location.reload()
+              })
+            }}
+            type="button"
+          >
+            <X size={14} /> Cancelar envío programado
+          </button>
+        ) : null}
         <Aviso estado={estado} />
       </div>
     </section>

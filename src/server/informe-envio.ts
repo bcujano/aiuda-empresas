@@ -38,21 +38,23 @@ export async function programarInforme(
 export async function informePendiente(orgId: string) {
   const { data } = await supabaseAdmin()
     .from('informes_envio')
-    .select('id, destino, whatsapp, asunto, enviar_at')
+    .select('id, destino, whatsapp, asunto, enviar_at, datos')
     .eq('organizacion_id', orgId)
     .is('enviado_at', null)
     .order('enviar_at')
     .limit(1)
     .maybeSingle()
-  return (
-    (data as {
-      id: string
-      destino: string
-      whatsapp: string
-      asunto: string
-      enviar_at: string
-    } | null) ?? null
-  )
+  const f = data as {
+    id: string
+    destino: string
+    whatsapp: string
+    asunto: string
+    enviar_at: string
+    datos: unknown
+  } | null
+  if (!f) return null
+  const analisis = esquemaInforme.safeParse(f.datos)
+  return { ...f, datos: analisis.success ? analisis.data : null }
 }
 
 /** Lo que n8n pide cada pocos minutos: el informe que ya toca enviar, con su PDF en base64. */
@@ -129,4 +131,14 @@ export async function marcarInforme(d: z.infer<typeof esquemaResultadoInforme>):
     .select('id')
     .maybeSingle()
   return Boolean(data)
+}
+
+/** Cancela lo que esté programado para este cliente: no sale nada. */
+export async function cancelarInformePendiente(orgId: string): Promise<boolean> {
+  const { error } = await supabaseAdmin()
+    .from('informes_envio')
+    .delete()
+    .eq('organizacion_id', orgId)
+    .is('enviado_at', null)
+  return !error
 }

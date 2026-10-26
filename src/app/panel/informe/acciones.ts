@@ -3,7 +3,11 @@
 import type { Resultado } from '@/app/panel/acciones'
 import { exigir } from '@/lib/auth'
 import { esquemaInforme } from '@/lib/informe-modelo'
-import { esquemaProgramacion, programarInforme } from '@/server/informe-envio'
+import {
+  cancelarInformePendiente,
+  esquemaProgramacion,
+  programarInforme,
+} from '@/server/informe-envio'
 
 /** Guarda el informe tal como quedó en el editor y lo programa para salir por correo. */
 export async function programarInformeAccion(
@@ -43,4 +47,11 @@ export async function programarInformeAccion(
     ok: true,
     aviso: `Informe guardado. Saldrá por WhatsApp a +${p.data.whatsapp} el ${enviarLocal.replace('T', ' a las ')} (hora de Quito).`,
   }
+}
+
+export async function cancelarInformeAccion(): Promise<Resultado> {
+  const sesion = await exigir('reportes')
+  if (!sesion || sesion.usuario.rol === 'operador') return { error: 'No tienes permiso.' }
+  if (!(await cancelarInformePendiente(sesion.org.id))) return { error: 'No se pudo cancelar.' }
+  return { ok: true, aviso: 'Envío cancelado. No saldrá ningún informe.' }
 }
