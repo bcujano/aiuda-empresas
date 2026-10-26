@@ -1,34 +1,37 @@
 'use client'
 
 import { FileText, RotateCcw } from 'lucide-react'
-import { type ReactNode, useEffect, useState } from 'react'
-import { cuentasDolares, type Informe } from '@/lib/informe-modelo'
+import { useEffect, useState } from 'react'
+import type { Informe } from '@/lib/informe-modelo'
 import { CHARLA_NUEVA } from './editor-informe-datos'
+import { BloquesFinales } from './editor-informe-finales'
 import {
+  Bloque,
   EditorCharla,
   Explicacion,
   ListaPersonas,
-  ListaTextos,
   llave,
   Num,
   Txt,
 } from './editor-informe-piezas'
+import { ProgramarInforme } from './programar-informe'
 
 /**
  * Editor del informe del cliente. Todo parte de las cifras reales; cada número y texto se puede ajustar
  * antes de generar el PDF. Los ajustes se recuerdan en este navegador.
  */
 
-function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
-  return (
-    <section className="tarjeta flex flex-col gap-3 p-4">
-      <h2 className="font-semibold text-base">{titulo}</h2>
-      {children}
-    </section>
-  )
-}
-
-export function EditorInforme({ inicial, claveLocal }: { inicial: Informe; claveLocal: string }) {
+export function EditorInforme({
+  inicial,
+  claveLocal,
+  correoInicial,
+  pendiente,
+}: {
+  inicial: Informe
+  claveLocal: string
+  correoInicial: string
+  pendiente: { destino: string; enviar_at: string } | null
+}) {
   const [d, setD] = useState<Informe>(inicial)
   const [restaurado, setRestaurado] = useState(false)
 
@@ -49,8 +52,6 @@ export function EditorInforme({ inicial, claveLocal }: { inicial: Informe; clave
   const poner = <K extends keyof Informe>(k: K, v: Informe[K]) => setD((x) => ({ ...x, [k]: v }))
   const exp = (k: keyof Informe['explicaciones'], v: string) =>
     poner('explicaciones', { ...d.explicaciones, [k]: v })
-  const dol = (k: keyof Informe['dolares'], v: number) => poner('dolares', { ...d.dolares, [k]: v })
-  const c = cuentasDolares(d.dolares, d.inversion)
 
   return (
     <div className="flex flex-col gap-4">
@@ -277,49 +278,9 @@ export function EditorInforme({ inicial, claveLocal }: { inicial: Informe; clave
         <Explicacion alCambiar={(v) => exp('charlas', v)} valor={d.explicaciones.charlas} />
       </Bloque>
 
-      <Bloque titulo="6 · Los dólares">
-        <div className="grid gap-3 sm:grid-cols-4">
-          <Num
-            alCambiar={(n) => dol('servicioMensual', n)}
-            etiqueta="Servicio al mes (US$ + IVA)"
-            valor={d.dolares.servicioMensual}
-          />
-          <Num
-            alCambiar={(n) => dol('meses', n)}
-            etiqueta="Meses de prueba"
-            valor={d.dolares.meses}
-          />
-          <Num
-            alCambiar={(n) => dol('planMensualCliente', n)}
-            etiqueta="Plan del cliente nuevo (US$/mes)"
-            valor={d.dolares.planMensualCliente}
-          />
-          <Num
-            alCambiar={(n) => dol('propuestaDia', n)}
-            etiqueta="Propuesta de inversión (US$ por día)"
-            valor={d.dolares.propuestaDia}
-          />
-        </div>
-        <p className="text-sm">
-          Costo de la prueba: <b>US$ {c.costoTrimestre + d.inversion}</b> · Un cliente nuevo vale{' '}
-          <b>US$ {c.valorAnual}</b> al año · Una reunión que cierre paga la prueba{' '}
-          <b>{c.veces.toFixed(1)}</b> veces.
-        </p>
-        <Explicacion alCambiar={(v) => exp('dolares', v)} valor={d.explicaciones.dolares} />
-      </Bloque>
+      <BloquesFinales d={d} exp={exp} poner={poner} />
 
-      <Bloque titulo="7 · Conclusiones y próximos pasos">
-        <ListaTextos
-          alCambiar={(l) => poner('conclusiones', l)}
-          lista={d.conclusiones}
-          titulo="Conclusiones"
-        />
-        <ListaTextos
-          alCambiar={(l) => poner('pasos', l)}
-          lista={d.pasos}
-          titulo="Lo que haremos de aquí en adelante"
-        />
-      </Bloque>
+      <ProgramarInforme correoInicial={correoInicial} informe={d} pendiente={pendiente} />
     </div>
   )
 }

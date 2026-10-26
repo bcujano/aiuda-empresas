@@ -121,9 +121,10 @@ export function CancelarSeguimiento({ id }: { id: string }) {
   )
 }
 
-export function CrearPlantillas() {
+export function CrearPlantillas({ cuenta }: { cuenta: string }) {
   return (
     <BotonAccion
+      confirmacion={`Se crearán las plantillas que faltan en esta cuenta de WhatsApp:\n${cuenta}\n\n¿Es la correcta?`}
       onEjecutar={crearPlantillasAccion}
       texto="Crear en Meta las que faltan"
       variante="primario"

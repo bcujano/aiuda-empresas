@@ -265,3 +265,12 @@ export function ListaTextos({
     </div>
   )
 }
+
+export function Bloque({ titulo, children }: { titulo: string; children: ReactNode }) {
+  return (
+    <section className="tarjeta flex flex-col gap-3 p-4">
+      <h2 className="font-semibold text-base">{titulo}</h2>
+      {children}
+    </section>
+  )
+}

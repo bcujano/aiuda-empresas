@@ -18,6 +18,7 @@ import {
   marcarRegistro,
   registrosPorHacer,
 } from '@/server/contacto-frio-respuestas'
+import { esquemaResultadoInforme, informesPorEnviar, marcarInforme } from '@/server/informe-envio'
 import { marcarRecordatorio, recordatoriosPendientes } from '@/server/recordatorios'
 import { marcarSeguimiento, seguimientosPorEnviar } from '@/server/seguimientos'
 
@@ -32,6 +33,8 @@ import { marcarSeguimiento, seguimientosPorEnviar } from '@/server/seguimientos'
  *   POST /api/agente/recordatorio_enviado → marca un recordatorio como entregado
  *   POST /api/agente/seguimientos → seguimientos por enviar ahora (ya decidido el canal)
  *   POST /api/agente/frio → contactos en frío por enviar ahora (WhatsApp con plantilla y correo)
+ *   POST /api/agente/informes → informes del cliente que ya toca enviar por correo (con su PDF)
+ *   POST /api/agente/informe_resultado → marca el informe como enviado o fallido
  *   POST /api/agente/frio_registros → WhatsApp en frío por registrar en Chatwoot
  *   POST /api/agente/frio_registrado → marca el registro hecho
  *   POST /api/agente/frio_resultado → marca un contacto en frío como enviado o fallido
@@ -109,6 +112,16 @@ export async function POST(peticion: Request, { params }: { params: Promise<{ ac
 
   if (accion === 'frio') {
     return NextResponse.json({ contactos: await prospectosPorEnviar() })
+  }
+
+  if (accion === 'informes') {
+    return NextResponse.json({ informes: await informesPorEnviar() })
+  }
+
+  if (accion === 'informe_resultado') {
+    const analisis = esquemaResultadoInforme.safeParse(cuerpo)
+    if (!analisis.success) return invalido(analisis.error.issues)
+    return NextResponse.json({ ok: await marcarInforme(analisis.data) })
   }
 
   if (accion === 'frio_registros') {

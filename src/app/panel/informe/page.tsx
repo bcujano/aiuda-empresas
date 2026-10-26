@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation'
 import { EditorInforme } from '@/components/panel/editor-informe'
 import { exigir } from '@/lib/auth'
 import { armarInforme } from '@/server/informe'
+import { informePendiente } from '@/server/informe-envio'
+import { organizacionPorId } from '@/server/organizaciones'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,5 +21,16 @@ export default async function Informe({
     inversion: num(q.inversion),
     propuestaDia: num(q.propuesta),
   })
-  return <EditorInforme claveLocal={`informe-${sesion.org.id}`} inicial={borrador} />
+  const [pendiente, org] = await Promise.all([
+    informePendiente(sesion.org.id),
+    organizacionPorId(sesion.org.id),
+  ])
+  return (
+    <EditorInforme
+      claveLocal={`informe-${sesion.org.id}`}
+      correoInicial={org?.aviso_email ?? ''}
+      inicial={borrador}
+      pendiente={pendiente}
+    />
+  )
 }

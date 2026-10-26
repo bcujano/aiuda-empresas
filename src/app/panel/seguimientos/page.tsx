@@ -54,7 +54,11 @@ export default async function Seguimientos() {
       <Tarjeta>
         <CabeceraTarjeta
           titulo="Plantillas de WhatsApp de este cliente"
-          extra={<CrearPlantillas />}
+          extra={
+            <CrearPlantillas
+              cuenta={`${sesion.org.nombre} · cuenta ${sesion.org.wa_waba_id ?? 'sin WABA'} · ${sesion.org.wa_numero ?? 'sin número'}`}
+            />
+          }
         />
         {plantillas.error ? (
           <p className="px-4 pt-3 text-[var(--peligro)] text-sm">{plantillas.error}</p>

@@ -10,6 +10,8 @@ export type PlantillaBase = {
   uso: string
   cuerpo: string
   ejemplo: string[]
+  /** Botón con enlace; la última parte del enlace es la variable {{1}} del botón. */
+  boton?: { texto: string; url: string; ejemplo: string }
 }
 
 export const PLANTILLAS: PlantillaBase[] = [
@@ -44,6 +46,19 @@ export const PLANTILLAS: PlantillaBase[] = [
     cuerpo:
       'Su reunión con {{1}} quedó confirmada: {{2}} ({{3}}). Si necesita cambiarla, responda a este mensaje.',
     ejemplo: ['Estudio Ejemplo', 'martes 13 de octubre, 10:00', 'virtual'],
+  },
+  {
+    base: 'informe_cliente',
+    categoria: 'UTILITY',
+    uso: 'Entrega del informe de campañas al cliente (botón con el PDF)',
+    cuerpo:
+      'Hola, el informe de campañas de {{1}} ya está listo. Toque el botón para verlo y descargarlo. Si tiene dudas, responda a este mensaje.',
+    ejemplo: ['Estudio Ejemplo'],
+    boton: {
+      texto: 'Ver informe',
+      url: 'https://aiuda-empresas.vercel.app/informe/{{1}}',
+      ejemplo: '0b8a5a00-0000-4000-8000-000000000000',
+    },
   },
   {
     base: 'seguimiento_lead',

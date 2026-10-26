@@ -34,6 +34,26 @@ export async function crearPlantillasFaltantes(
 ): Promise<{ creadas: string[]; errores: string[] }> {
   const { lista, error } = await estadoPlantillas(org)
   if (error) return { creadas: [], errores: [error] }
+  // Seguro contra equivocarse de cuenta: el WABA debe contener el número de WhatsApp de ESTE cliente.
+  const numeros = await graph<{ data: { id: string; display_phone_number: string }[] }>(
+    `/${org.wa_waba_id}/phone_numbers?fields=id,display_phone_number`,
+  )
+  if (!numeros.ok)
+    return { creadas: [], errores: [`No pude verificar la cuenta de WhatsApp: ${numeros.error}`] }
+  const digitos = (t: string | null) => (t ?? '').replace(/\D/g, '')
+  const contiene = numeros.datos.data.some(
+    (n) =>
+      n.id === org.wa_phone_number_id ||
+      (org.wa_numero && digitos(n.display_phone_number) === digitos(org.wa_numero)),
+  )
+  if (!contiene) {
+    return {
+      creadas: [],
+      errores: [
+        `El WABA ${org.wa_waba_id} no contiene el número de ${org.nombre} (${org.wa_numero ?? 'sin número'}). No se creó nada: revisa la ficha del cliente.`,
+      ],
+    }
+  }
   const creadas: string[] = []
   const errores: string[] = []
   for (const p of PLANTILLAS) {
@@ -45,7 +65,24 @@ export async function crearPlantillasFaltantes(
         name: nombre,
         language: 'es',
         category: p.categoria,
-        components: [{ type: 'BODY', text: p.cuerpo, example: { body_text: [p.ejemplo] } }],
+        components: [
+          { type: 'BODY', text: p.cuerpo, example: { body_text: [p.ejemplo] } },
+          ...(p.boton
+            ? [
+                {
+                  type: 'BUTTONS',
+                  buttons: [
+                    {
+                      type: 'URL',
+                      text: p.boton.texto,
+                      url: p.boton.url,
+                      example: [p.boton.ejemplo],
+                    },
+                  ],
+                },
+              ]
+            : []),
+        ],
       },
     })
     if (r.ok) creadas.push(nombre)
